@@ -2,6 +2,7 @@
 
 using PlayerRoles;
 using PlayerStatsSystem;
+using System;
 
 namespace BetterCommands.Conditions
 {
@@ -36,6 +37,12 @@ namespace BetterCommands.Conditions
                 if (!(ConditionObject is float health)) return new ErrorResult($"Condition failed: The condition has a HealthOnly flag, but the condition's object is not a valid floating-point number!");
                 if (hub.playerStats.GetModule<HealthStat>().NormalizedValue != health) return new ErrorResult($"Condition failed: You must have precisely {health} health to run this command.");
                 return new SuccessResult(null);
+            }
+
+            if (Flags.HasFlag(ConditionFlag.Custom))
+            {
+                if (!(ConditionObject is Func<ReferenceHub, IResult> func)) return new ErrorResult($"Condition failed: The condition has a Custom flag, but the condition's object is not a valid delegate!");
+                return func(hub);
             }
 
             return new SuccessResult(null);

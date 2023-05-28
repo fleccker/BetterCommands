@@ -46,9 +46,6 @@ namespace BetterCommands.Management
                     return;
                 }
 
-                Log.Debug($"Registering method: {method.Name} ({method.DeclaringType.FullName}) with handle: {handle?.ToString() ?? "NULL"}", Loader.Config.IsDebugEnabled, "Command Manager");
-                Log.Debug($"Validating parameters ..", Loader.Config.IsDebugEnabled, "Command Manager");
-
                 var paramsResult = ParsingUtils.ValidateArguments(method);
                 if (paramsResult is ErrorResult paramsError)
                 {
@@ -183,7 +180,7 @@ namespace BetterCommands.Management
                                 Command = alias,
                                 Description = null,
                                 Usage = null,
-                                Hidden = false,
+                                Hidden = data.Hidden,
                                 AliasOf = data.Command
                             };
 
@@ -213,7 +210,6 @@ namespace BetterCommands.Management
         {
             if (result.Result is string str) return str;
             if (result.Result is IEnumerable values) return string.Join("\n", values);
-
             return result.Result.ToString();
         }
     }

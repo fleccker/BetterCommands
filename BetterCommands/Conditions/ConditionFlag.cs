@@ -4,6 +4,7 @@
     {
         DisableServerPlayer,
         RoleTypeOnly,
-        HealthOnly
+        HealthOnly,
+        Custom
     }
 }
