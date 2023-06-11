@@ -1,10 +1,11 @@
-﻿using BetterCommands.Results;
+﻿using helpers.Results;
+
 using System;
 
 namespace BetterCommands.Parsing
 {
     public interface ICommandArgumentParser
     {
-        IResult Parse(string value, Type type);
+        IResult<object> Parse(string value, Type type);
     }
 }

@@ -1,4 +1,4 @@
-﻿using BetterCommands.Results;
+﻿using helpers.Results;
 
 using System;
 
@@ -23,7 +23,7 @@ namespace BetterCommands.Parsing.Parsers
             CommandArgumentParser.AddParser(Instance, typeof(Enum));
         }
 
-        public IResult Parse(string value, Type type)
+        public IResult<object> Parse(string value, Type type)
         {
             if (type == typeof(string)) return new SuccessResult(value.Trim());
             else if (type == typeof(int))

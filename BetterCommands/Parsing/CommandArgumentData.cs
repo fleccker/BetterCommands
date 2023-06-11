@@ -1,9 +1,8 @@
-﻿using BetterCommands.Results;
+﻿using helpers.Results;
 
 using PluginAPI.Core;
 
 using System;
-using System.Collections.Generic;
 
 namespace BetterCommands.Parsing
 {
@@ -13,27 +12,17 @@ namespace BetterCommands.Parsing
         public ICommandArgumentParser Parser { get; }
         public string Name { get; }
 
-        public bool IsRemainder { get; }
-        public bool IsMultiple { get; }
         public bool IsOptional { get; }
 
         public object DefaultValue { get; }
 
-        public List<IResult> TempResultStore { get; } = new List<IResult>();
+        public IResult<object> Parse(string value) => Parser.Parse(value, Type);
 
-        public IResult Parse(string value)
-        {
-            if (Parser is null) return new ErrorResult($"Argument of type {Type.FullName} does not have a defined parser!", new NullReferenceException($"Argument of type {Type.FullName} does not have a defined parser!"));
-            return Parser.Parse(value, Type);
-        }
-
-        public CommandArgumentData(Type argType, string argName, bool remainder, bool multiple, bool optional, object defaultValue)
+        public CommandArgumentData(Type argType, string argName, bool optional, object defaultValue)
         {
             Type = argType;
             Name = argName;
 
-            IsRemainder = remainder;
-            IsMultiple = multiple;
             IsOptional = optional;
 
             DefaultValue = defaultValue;

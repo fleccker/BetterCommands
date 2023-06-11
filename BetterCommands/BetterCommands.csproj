@@ -44,6 +44,9 @@
     <Reference Include="CommandSystem.Core">
       <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\SCP Secret Laboratory Dedicated Server\SCPSL_Data\Managed\CommandSystem.Core.dll</HintPath>
     </Reference>
+    <Reference Include="helpers">
+      <HintPath>..\..\helpers\helpers\bin\Release\helpers.dll</HintPath>
+    </Reference>
     <Reference Include="Mirror_publicized">
       <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\SCP Secret Laboratory Dedicated Server\SCPSL_Data\Managed\Mirror_publicized.dll</HintPath>
     </Reference>
@@ -74,20 +77,17 @@
   <ItemGroup>
     <Compile Include="CommandAliasesAttribute.cs" />
     <Compile Include="CommandAttribute.cs" />
-    <Compile Include="Commands\TestCommands.cs" />
     <Compile Include="Conditions\ConditionAttribute.cs" />
     <Compile Include="Conditions\ConditionData.cs" />
     <Compile Include="Conditions\ConditionFlag.cs" />
     <Compile Include="Config.cs" />
     <Compile Include="DescriptionAttribute.cs" />
-    <Compile Include="IgnoreExtraArgsAttribute.cs" />
     <Compile Include="Loader.cs" />
     <Compile Include="Management\CommandData.cs" />
     <Compile Include="Management\CommandManager.cs" />
     <Compile Include="Management\CommandType.cs" />
     <Compile Include="Parsing\CommandArgumentData.cs" />
     <Compile Include="Parsing\CommandArgumentParser.cs" />
-    <Compile Include="Parsing\CommandParserPart.cs" />
     <Compile Include="Parsing\ICommandArgumentParser.cs" />
     <Compile Include="Parsing\Parsers\CollectionParser.cs" />
     <Compile Include="Parsing\Parsers\DoorParser.cs" />
@@ -97,11 +97,6 @@
     <Compile Include="Patches\HelpPatch.cs" />
     <Compile Include="Patches\SynchronizeCommandsPatch.cs" />
     <Compile Include="Permissions\PermissionAttribute.cs" />
-    <Compile Include="RemainderAttribute.cs" />
-    <Compile Include="Results\IResult.cs" />
-    <Compile Include="Parsing\ParsingUtils.cs" />
-    <Compile Include="Results\ErrorResult.cs" />
-    <Compile Include="Results\SuccessResult.cs" />
     <Compile Include="Permissions\PermissionConfig.cs" />
     <Compile Include="Permissions\PermissionData.cs" />
     <Compile Include="Permissions\PermissionLevel.cs" />

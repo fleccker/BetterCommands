@@ -1,19 +1,23 @@
 ﻿using BetterCommands.Conditions;
 using BetterCommands.Parsing;
 using BetterCommands.Permissions;
-using BetterCommands.Results;
 
-using PluginAPI.Core;
+using helpers;
+using helpers.Extensions;
+using helpers.Results;
+
+using PluginAPI.Core.Interfaces;
 
 using RemoteAdmin;
 
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 
 using Utils.NonAllocLINQ;
+
+using Log = PluginAPI.Core.Log;
 
 namespace BetterCommands.Management
 {
@@ -35,46 +39,63 @@ namespace BetterCommands.Management
         {
             try
             {
-                if (method.DeclaringType.Namespace.StartsWith("System")) return;
-                if (!TryGetAttributes(method,
-                    out var cmd,
-                    out var aliases,
-                    out var conditions,
-                    out var perms,
-                    out var desc))
+                if (method.TryGetAttribute<CommandAttribute>(out var commandAttribute))
                 {
-                    return;
+                    var args = new List<CommandArgumentData>();
+                    var methodArgs = method.GetParameters();
+
+                    if (methodArgs is null || !methodArgs.Any() ||
+                        (!Reflection.HasInterface<IPlayer>(methodArgs[0].ParameterType, true) && methodArgs[0].ParameterType != typeof(ReferenceHub)))
+                        return;
+
+                    methodArgs = methodArgs.Skip(1).ToArray();
+
+                    if (methodArgs.Any())
+                    {
+                        methodArgs.ForEach(arg =>
+                        {
+                            args.Add(new CommandArgumentData(arg.ParameterType, arg.Name, arg.HasDefaultValue, arg.DefaultValue));
+                        });
+                    }
+
+                    var cmdArgs = args.ToArray();
+                    var conditions = Array.Empty<ConditionData>();
+                    var aliases = Array.Empty<string>();
+                    var description = "No description.";
+                    var hidden = false;
+
+                    PermissionData perms = null;
+
+                    if (method.TryGetAttribute<PermissionAttribute>(out var permissionAttribute))
+                        perms = new PermissionData(permissionAttribute.RequiredNodes, permissionAttribute.NodeMode, permissionAttribute.RequiredLevel);
+
+                    if (method.TryGetAttribute<DescriptionAttribute>(out var descriptionAttribute))
+                        description = descriptionAttribute.Description;
+
+                    var conditionAttributes = method.GetCustomAttributes<ConditionAttribute>();
+                    if (conditionAttributes.Any())
+                    {
+                        var conditionList = new List<ConditionData>();
+
+                        conditionAttributes.ForEach(attribute =>
+                        {
+                            conditionList.Add(new ConditionData(attribute.Flags, attribute.ConditionObject));
+                        });
+
+                        conditions = conditionList.ToArray();
+                    }
+
+                    var cmdData = new CommandData(method, perms, conditions, cmdArgs, commandAttribute.Name, description, aliases, commandAttribute.IsHidden, handle);
+
+                    if (commandAttribute.Types.HasFlag(CommandType.RemoteAdmin))
+                        TryRegister(cmdData, CommandType.RemoteAdmin);
+
+                    if (commandAttribute.Types.HasFlag(CommandType.GameConsole))
+                        TryRegister(cmdData, CommandType.GameConsole);
+
+                    if (commandAttribute.Types.HasFlag(CommandType.PlayerConsole))
+                        TryRegister(cmdData, CommandType.PlayerConsole);
                 }
-
-                var paramsResult = ParsingUtils.ValidateArguments(method);
-                if (paramsResult is ErrorResult paramsError)
-                {
-                    Log.Warning($"{paramsError.Reason}", "Command Manager");
-                    return;
-                }
-
-                var args = paramsResult.Result as CommandArgumentData[];
-
-                var condData = conditions.Any() ? new ConditionData[conditions.Length] : Array.Empty<ConditionData>();
-                if (conditions.Any()) for (int i = 0; i < conditions.Length; i++) condData[i] = new ConditionData(conditions[i].Flags, conditions[i].ConditionObject);
-
-                var cmdData = new CommandData(
-               method,
-               perms != null ? new PermissionData(perms.RequiredNodes, perms.NodeMode, perms.RequiredLevel) : null,
-               condData,
-               args,
-               cmd.Name,
-               $"{cmd.Name}{(args.Any() ? $" {string.Join(", ", args.Select(x => $"{x.Name} [{x.Type.Name}]"))}" : "")}",
-               desc?.Description ?? "Description.",
-               aliases?.Aliases ?? Array.Empty<string>(),
-               method.IsDefined(typeof(IgnoreExtraArgsAttribute), false),
-               cmd.IsHidden,
-               handle);
-
-                var cmdType = cmd.Types;
-                if (cmdType.HasFlag(CommandType.PlayerConsole)) TryRegister(cmdData, CommandType.PlayerConsole);
-                if (cmdType.HasFlag(CommandType.GameConsole)) TryRegister(cmdData, CommandType.GameConsole);
-                if (cmdType.HasFlag(CommandType.RemoteAdmin)) TryRegister(cmdData, CommandType.RemoteAdmin);
             }
             catch (Exception ex)
             {
@@ -91,7 +112,9 @@ namespace BetterCommands.Management
             }
 
             _commandsByType[commandType].Add(commandData);
+
             Log.Info($"Plugin {commandData.Plugin.PluginName} has registered a {commandType} command: {commandData.Name}", "Command Manager");
+
             return true;
         }
 
@@ -104,6 +127,7 @@ namespace BetterCommands.Management
             }
 
             _commandsByType[type].Remove(cmd);
+
             Log.Info($"Command {cmd.Name} of type {type} ({cmd.Plugin.PluginName}) has been unregistered.", "Command Manager");
 
             return true;
@@ -125,15 +149,20 @@ namespace BetterCommands.Management
             if (!TryGetCommand(cmdName, commandType, out var cmd))
             {
                 sender.characterClassManager.ConsolePrint($"[Better Commands] Command execution failed: Unknown command ({cmdName})!", "red");
+
                 Log.Debug($"Command {cmdName} does not exist or it's target method is null!", Loader.Config.IsDebugEnabled, "Command Manager");
+
                 return false;
             }
 
             response = $"{cmd.Name.ToUpper()}#";
 
             var result = cmd.Execute(string.Join(" ", args.Skip(1)), sender);
-            if (result is ErrorResult error)
+
+            if (!result.IsSuccess)
             {
+                var error = result.As<ErrorResult<string>>();
+
                 sender.characterClassManager.ConsolePrint($"[Command Output] {error.Reason}", "red");
                 response += $"Command execution failed!\n{error.Reason}";
 
@@ -147,7 +176,7 @@ namespace BetterCommands.Management
             }
             else
             {
-                response += GetResultString(result);
+                response += result.Result;
                 sender.characterClassManager.ConsolePrint($"[Command Output] {response}", "red");
                 
                 return true;
@@ -165,7 +194,7 @@ namespace BetterCommands.Management
                         Command = x.Name,
                         Description = x.Description,
                         Hidden = x.IsHidden,
-                        Usage = x.Usage.Split(' '),
+                        Usage = null,
                         AliasOf = null
                     };
 
@@ -189,28 +218,6 @@ namespace BetterCommands.Management
                     }
                 });
             }
-        }
-
-        private static bool TryGetAttributes(MethodInfo target,
-            out CommandAttribute commandAttribute, 
-            out CommandAliasesAttribute commandAliasesAttribute, 
-            out ConditionAttribute[] conditionAttributes, 
-            out PermissionAttribute permissionAttribute,
-            out DescriptionAttribute descriptionAttribute)
-        {
-            commandAttribute = target.GetCustomAttribute<CommandAttribute>();
-            commandAliasesAttribute = target.GetCustomAttribute<CommandAliasesAttribute>();
-            conditionAttributes = target.GetCustomAttributes<ConditionAttribute>()?.ToArray() ?? Array.Empty<ConditionAttribute>();
-            permissionAttribute = target.GetCustomAttribute<PermissionAttribute>();
-            descriptionAttribute = target.GetCustomAttribute<DescriptionAttribute>();
-            return commandAttribute != null;
-        }
-
-        private static string GetResultString(IResult result)
-        {
-            if (result.Result is string str) return str;
-            if (result.Result is IEnumerable values) return string.Join("\n", values);
-            return result.Result.ToString();
         }
     }
 }

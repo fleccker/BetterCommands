@@ -1,23 +1,27 @@
-﻿using BetterCommands.Results;
+﻿using helpers.Results;
 
 namespace BetterCommands.Permissions
 {
     public class PermissionData
     {
         public string[] RequiredNodes { get; }
+
         public PermissionNodeMode NodeMode { get; }
         public PermissionLevel? RequiredLevel { get; }
 
-        public IResult Validate(ReferenceHub player)
+        public IResult<object> Validate(ReferenceHub player)
         {
             if (RequiredNodes != null && RequiredNodes.Length > 0)
             {
                 if (PermissionManager.TryGetNodes(player, out var nodes))
                 {
-                    if (PermissionUtils.TryValidateNodes(RequiredNodes, nodes, NodeMode)) return new SuccessResult(null);
-                    else return new ErrorResult($"Missing permissions!\n{ToString()}");
+                    if (PermissionUtils.TryValidateNodes(RequiredNodes, nodes, NodeMode)) 
+                        return new SuccessResult(null);
+                    else 
+                        return new ErrorResult($"Missing permissions!\n{ToString()}");
                 }
-                else return new ErrorResult($"Missing permissions!\n{ToString()}");
+                else 
+                    return new ErrorResult($"Missing permissions!\n{ToString()}");
             }
             else
             {
@@ -27,9 +31,11 @@ namespace BetterCommands.Permissions
                     {
                         if (PermissionManager.TryGetLevel(player, out var permissionLevel))
                         {
-                            if (!permissionLevel.HasFlag(RequiredLevel.Value)) return new ErrorResult($"Missing permissions!\n{ToString()}");
+                            if (!permissionLevel.HasFlag(RequiredLevel.Value)) 
+                                return new ErrorResult($"Missing permissions!\n{ToString()}");
                         }
-                        else return new ErrorResult($"Missing permissions!\n{ToString()}");
+                        else 
+                            return new ErrorResult($"Missing permissions!\n{ToString()}");
                     }
                 }
             }
@@ -56,7 +62,9 @@ namespace BetterCommands.Permissions
 
             if (RequiredLevel.HasValue)
             {
-                if (str != "") str += $"\n";
+                if (str != "") 
+                    str += $"\n";
+
                 str += $"Level: {RequiredLevel.Value}";
             }
 
