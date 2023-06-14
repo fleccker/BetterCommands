@@ -44,7 +44,8 @@
     <Reference Include="CommandSystem.Core">
       <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\SCP Secret Laboratory Dedicated Server\SCPSL_Data\Managed\CommandSystem.Core.dll</HintPath>
     </Reference>
-    <Reference Include="helpers">
+    <Reference Include="helpers, Version=3.2.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\helpers\helpers\bin\Release\helpers.dll</HintPath>
     </Reference>
     <Reference Include="Mirror_publicized">
@@ -73,8 +74,16 @@
     <Reference Include="UnityEngine.CoreModule">
       <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\SCP Secret Laboratory Dedicated Server\SCPSL_Data\Managed\UnityEngine.CoreModule.dll</HintPath>
     </Reference>
+    <Reference Include="UnityEngine.PhysicsModule, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\SCP Secret Laboratory Dedicated Server\SCPSL_Data\Managed\UnityEngine.PhysicsModule.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Arguments\Effects\EffectData.cs" />
+    <Compile Include="Arguments\Prefabs\PrefabData.cs" />
+    <Compile Include="Arguments\Toys\ToyAllowedNewArgumentData.cs" />
+    <Compile Include="Arguments\Toys\ToyDisallowedNewArgumentData.cs" />
     <Compile Include="CommandAliasesAttribute.cs" />
     <Compile Include="CommandAttribute.cs" />
     <Compile Include="Conditions\ConditionAttribute.cs" />
@@ -83,15 +92,25 @@
     <Compile Include="Config.cs" />
     <Compile Include="DescriptionAttribute.cs" />
     <Compile Include="Loader.cs" />
+    <Compile Include="LookingAtAttribute.cs" />
     <Compile Include="Management\CommandData.cs" />
     <Compile Include="Management\CommandManager.cs" />
     <Compile Include="Management\CommandType.cs" />
+    <Compile Include="Parsing\ArgumentUtils.cs" />
+    <Compile Include="Parsing\ColorUtils.cs" />
     <Compile Include="Parsing\CommandArgumentData.cs" />
     <Compile Include="Parsing\CommandArgumentParser.cs" />
     <Compile Include="Parsing\ICommandArgumentParser.cs" />
+    <Compile Include="Parsing\Parsers\AdminToyParser.cs" />
     <Compile Include="Parsing\Parsers\CollectionParser.cs" />
     <Compile Include="Parsing\Parsers\DoorParser.cs" />
+    <Compile Include="Parsing\Parsers\EffectParser.cs" />
+    <Compile Include="Parsing\Parsers\GameObjectParser.cs" />
+    <Compile Include="Parsing\Parsers\NetworkIdentityParser.cs" />
     <Compile Include="Parsing\Parsers\PlayerParser.cs" />
+    <Compile Include="Parsing\Parsers\PrefabParser.cs" />
+    <Compile Include="Parsing\Parsers\ReferenceHubParser.cs" />
+    <Compile Include="Parsing\Parsers\RoomIdentifierParser.cs" />
     <Compile Include="Parsing\Parsers\SimpleParser.cs" />
     <Compile Include="Patches\ExecuteCommandsPatch.cs" />
     <Compile Include="Patches\HelpPatch.cs" />

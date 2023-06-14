@@ -1,5 +1,6 @@
 ﻿using BetterCommands.Management;
 
+using System.Linq;
 using System;
 using System.Collections.Generic;
 
@@ -10,9 +11,19 @@ using Interactables.Interobjects.DoorUtils;
 using PluginAPI.Core.Interfaces;
 
 using helpers.Results;
+using helpers.Pooling.Pools;
 using helpers.Parsers.String;
+using helpers.Extensions;
 using helpers;
-using System.Linq;
+
+using System.Collections;
+
+using MapGeneration;
+
+using BetterCommands.Arguments.Effects;
+using UnityEngine;
+using Mirror;
+using BetterCommands.Arguments.Prefabs;
 
 namespace BetterCommands.Parsing
 {
@@ -24,7 +35,14 @@ namespace BetterCommands.Parsing
         {
             AddParser<PlayerParser>(typeof(IPlayer));
             AddParser<DoorParser>(typeof(DoorVariant));
+            AddParser<ReferenceHubParser>(typeof(ReferenceHub));
+            AddParser<RoomIdentifierParser>(typeof(RoomIdentifier));
+            AddParser<EffectParser>(typeof(EffectData));
+            AddParser<GameObjectParser>(typeof(GameObject));
+            AddParser<NetworkIdentityParser>(typeof(NetworkIdentity));
+            AddParser<PrefabParser>(typeof(PrefabData));
 
+            AdminToyParser.Register();
             SimpleParser.Register();
             CollectionParser.Register();
         }
@@ -33,12 +51,18 @@ namespace BetterCommands.Parsing
 
         public static bool TryGetParser(Type argType, out ICommandArgumentParser commandArgumentParser)
         {
-            if (argType.IsSubclassOf(typeof(IPlayer))) argType = typeof(IPlayer);
-            else if (typeof(DoorVariant).IsAssignableFrom(argType)) argType = typeof(DoorVariant);
-            else if (argType.IsEnum) argType = typeof(Enum);
-            else if (argType.IsArray) argType = typeof(Array);
-            else if (argType.IsSubclassOf(typeof(IDictionary<,>))) argType = typeof(IDictionary<,>);
-            else if (argType.IsSubclassOf(typeof(IEnumerable<>))) argType = typeof(IEnumerable<>);
+            if (Reflection.HasInterface<IPlayer>(argType, true)) 
+                argType = typeof(IPlayer);
+            else if (Reflection.HasType<DoorVariant>(argType, true)) 
+                argType = typeof(DoorVariant);
+            else if (argType.IsEnum) 
+                argType = typeof(Enum);
+            else if (argType.IsArray)
+                argType = typeof(Array);
+            else if (Reflection.HasInterface<IDictionary>(argType, true)) 
+                argType = typeof(IDictionary);
+            else if (Reflection.HasInterface<IEnumerable>(argType, true)) 
+                argType = typeof(IEnumerable);
             
             return _knownParsers.TryGetValue(argType, out commandArgumentParser) && commandArgumentParser != null;
         }
@@ -52,32 +76,62 @@ namespace BetterCommands.Parsing
             return commandArgumentParser;
         }
             
-        public static IResult<object[]> Parse(CommandData command, string input)
+        public static IResult<object[]> Parse(CommandData command, string input, ReferenceHub sender)
         {
-            var argsResult = StringParser.Parse(input);
-
-            if (!argsResult.IsSuccess)
-                return new ErrorResult<object[]>(argsResult.As<ErrorResult<string[]>>().Reason);
-
-            var resultList = new List<object>();
-
-            for (int i = 0; i < command.Arguments.Length; i++)
+            try
             {
-                if (command.Arguments[i].Parser is null)
-                    return new ErrorResult<object[]>($"Failed to parse argument {i} {command.Arguments[i].Name}: missing parser!");
+                var stringParseResult = StringParser.Parse(input);
 
-                if (i >= argsResult.Result.Length && !(i <= command.Arguments.Length && command.Arguments.Last().IsOptional))
-                    return new ErrorResult<object[]>("Missing arguments!");
+                if (!stringParseResult.IsSuccess)
+                    return new ErrorResult<object[]>($"Failed to parse string into arguments: {stringParseResult.GetError()}");
 
-                var parseResult = command.Arguments[i].Parse(argsResult.Result[i]);
+                if (command.Arguments.Count(arg => !arg.IsOptional && !arg.IsLookingAt) != stringParseResult.Result.Length)
+                    return new ErrorResult<object[]>($"<color=red>Missing arguments!</color>\n{command.Usage}");
 
-                if (!parseResult.IsSuccess)
-                    return new ErrorResult<object[]>(parseResult.As<ErrorResult<object>>().Reason);
+                var results = ListPool<object>.Pool.Get();
 
-                resultList.Add(parseResult.Result);
+                for (int i = 0; i < command.Arguments.Length; i++)
+                {
+                    var arg = command.Arguments[i];
+
+                    if (arg.IsLookingAt)
+                    {
+                        if (!ArgumentUtils.TryGetLookingAt(sender, arg.LookingAtDistance, arg.LookingAtMask, arg.Type, out var hitResult))
+                            return new ErrorResult<object[]>($"Failed to find a valid object of type {arg.Type.FullName} in radius of {arg.LookingAtDistance} in mask {arg.LookingAtMask} of a looking-at argument at index {i}");
+                        else
+                        {
+                            results.Add(hitResult);
+                            continue;
+                        }
+                    }
+
+                    if (i >= stringParseResult.Result.Length)
+                    {
+                        if (arg.IsOptional)
+                            results.Add(arg.DefaultValue);
+                        else
+                            return new ErrorResult<object[]>($"<color=red>Missing arguments!</color>\n{command.Usage}");
+                    }
+                    else
+                    {
+                        var value = stringParseResult.Result[i];
+                        var parserResult = arg.Parse(value);
+
+                        if (!parserResult.IsSuccess)
+                            return new ErrorResult<object[]>($"Failed to parse argument {arg.Name} at index {i}:\n{parserResult.GetError()}");
+                        else
+                            results.Add(parserResult.Result);
+                    }
+                }
+
+                var result = new SuccessResult<object[]>(results.ToArray());
+                ListPool<object>.Pool.Push(results);
+                return result;
             }
-
-            return new SuccessResult<object[]>(resultList.ToArray());
+            catch (Exception ex)
+            {           
+                return new ErrorResult<object[]>(ex.ToString(), ex);
+            }
         }
     }
 }

@@ -8,6 +8,9 @@ using PluginAPI.Loader;
 using BetterCommands.Management;
 
 using System.Reflection;
+using System.Collections.Generic;
+using System.Linq;
+using UnityEngine;
 
 namespace BetterCommands
 {
@@ -66,5 +69,14 @@ namespace BetterCommands
 
         public static void SaveConfig() => Handler.SaveConfig(Instance, "ConfigInstance");
         public static void LoadConfig() => Handler.LoadConfig(Instance, "ConfigInstance");
+
+        [Command("testcommand", Management.CommandType.RemoteAdmin, Management.CommandType.PlayerConsole, Management.CommandType.GameConsole)]
+        public static string TestCommand(ReferenceHub sender, Dictionary<string, int> values, KeyCode key)
+        {
+            return $"\n" +
+                $"Sender: {sender.LoggedNameFromRefHub()}\n" +
+                $"Values: {string.Join(" | ", values.Select(pair => $"{pair.Key}: {pair.Value}"))}\n" +
+                $"Key: {key}";
+        }
     }
 }

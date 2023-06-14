@@ -18,9 +18,10 @@ namespace BetterCommands.Parsing.Parsers
                 if (door.TargetDoor is null) 
                     continue;
 
-                if (value.ToLower() == door.GetName.ToLower()) 
+                if (string.Equals(value, door.GetName, StringComparison.OrdinalIgnoreCase)) 
                     return new SuccessResult(door.TargetDoor);
-                if (int.TryParse(value, out var netId) && (door.TargetDoor.netId == netId || door.TargetDoor.GetInstanceID() == netId)) 
+                if (int.TryParse(value, out var netId) 
+                    && (door.TargetDoor.netId == netId || door.TargetDoor.GetInstanceID() == netId)) 
                     return new SuccessResult(door.TargetDoor); 
             }
 

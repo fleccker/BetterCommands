@@ -76,7 +76,7 @@ namespace BetterCommands.Patches
 
                 if (CommandManager.TryExecute(string.Join(" ", split), player.ReferenceHub, CommandType.RemoteAdmin, out __result))
                 {
-                    sender.RaReply(__result, !__result.Contains("Command execution failed"), true, string.Empty);
+                    sender.RaReply(__result, true, true, string.Empty);
                     return false;
                 }
 

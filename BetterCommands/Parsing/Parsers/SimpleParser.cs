@@ -1,6 +1,8 @@
-﻿using helpers.Results;
+﻿using helpers.Extensions;
+using helpers.Results;
 
 using System;
+using System.Linq;
 
 namespace BetterCommands.Parsing.Parsers
 {
@@ -25,72 +27,118 @@ namespace BetterCommands.Parsing.Parsers
 
         public IResult<object> Parse(string value, Type type)
         {
-            if (type == typeof(string)) return new SuccessResult(value.Trim());
+            if (type == typeof(string)) 
+                return new SuccessResult(value.Trim());
             else if (type == typeof(int))
             {
-                if (int.TryParse(value, out var val)) return new SuccessResult(val);
-                else return new ErrorResult($"Failed to parse {value} to {type.Name}");
+                if (int.TryParse(value, out var val)) 
+                    return new SuccessResult(val);
+                else 
+                    return new ErrorResult($"Failed to parse {value} to {type.FullName}");
             }
             else if (type == typeof(uint))
             {
-                if (uint.TryParse(value, out var val)) return new SuccessResult(val);
-                else return new ErrorResult($"Failed to parse {value} to {type.Name}");
+                if (uint.TryParse(value, out var val)) 
+                    return new SuccessResult(val);
+                else 
+                    return new ErrorResult($"Failed to parse {value} to {type.FullName}");
             }
             else if (type == typeof(byte))
             {
-                if (byte.TryParse(value, out var val)) return new SuccessResult(val);
-                else return new ErrorResult($"Failed to parse {value} to {type.Name}");
+                if (byte.TryParse(value, out var val)) 
+                    return new SuccessResult(val);
+                else 
+                    return new ErrorResult($"Failed to parse {value} to {type.FullName}");
             }
             else if (type == typeof(sbyte))
             {
-                if (sbyte.TryParse(value, out var val)) return new SuccessResult(val);
-                else return new ErrorResult($"Failed to parse {value} to {type.Name}");
+                if (sbyte.TryParse(value, out var val)) 
+                    return new SuccessResult(val);
+                else 
+                    return new ErrorResult($"Failed to parse {value} to {type.FullName}");
             }
             else if (type == typeof(short))
             {
-                if (short.TryParse(value, out var val)) return new SuccessResult(val);
-                else return new ErrorResult($"Failed to parse {value} to {type.Name}");
+                if (short.TryParse(value, out var val)) 
+                    return new SuccessResult(val);
+                else 
+                    return new ErrorResult($"Failed to parse {value} to {type.FullName}");
             }
             else if (type == typeof(ushort))
             {
-                if (ushort.TryParse(value, out var val)) return new SuccessResult(val);
-                else return new ErrorResult($"Failed to parse {value} to {type.Name}");
+                if (ushort.TryParse(value, out var val)) 
+                    return new SuccessResult(val);
+                else 
+                    return new ErrorResult($"Failed to parse {value} to {type.FullName}");
             }
             else if (type == typeof(long))
             {
-                if (long.TryParse(value, out var val)) return new SuccessResult(val);
-                else return new ErrorResult($"Failed to parse {value} to {type.Name}");
+                if (long.TryParse(value, out var val)) 
+                    return new SuccessResult(val);
+                else
+                    return new ErrorResult($"Failed to parse {value} to {type.FullName}");
             }
             else if (type == typeof(ulong))
             {
-                if (ulong.TryParse(value, out var val)) return new SuccessResult(val);
-                else return new ErrorResult($"Failed to parse {value} to {type.Name}");
+                if (ulong.TryParse(value, out var val)) 
+                    return new SuccessResult(val);
+                else 
+                    return new ErrorResult($"Failed to parse {value} to {type.FullName}");
             }
             else if (type == typeof(float))
             {
-                if (float.TryParse(value, out var val)) return new SuccessResult(val);
-                else return new ErrorResult($"Failed to parse {value} to {type.Name}");
+                if (float.TryParse(value, out var val)) 
+                    return new SuccessResult(val);
+                else 
+                    return new ErrorResult($"Failed to parse {value} to {type.FullName}");
             }
             else if (type == typeof(bool))
             {
-                if (bool.TryParse(value, out var val)) return new SuccessResult(val);
-                else return new ErrorResult($"Failed to parse {value} to {type.Name}");
+                if (bool.TryParse(value, out var val)) 
+                    return new SuccessResult(val);
+                else 
+                    return new ErrorResult($"Failed to parse {value} to {type.FullName}");
             }
             else if (type.IsEnum)
             {
                 try
                 {
-                    var val = Enum.Parse(type, value, true);
-                    if (val != null) return new SuccessResult(val);
-                    else return new ErrorResult($"Failed to parse {value} to {type.Name}");
+                    var values = Enum.GetValues(type).Cast<Enum>();
+
+                    if (int.TryParse(value, out var enumIndex))
+                    {
+                        if (values.TryGetFirst(enumValue =>
+                        {
+                            var enumInteger = Convert.ChangeType(enumValue, enumValue.GetTypeCode());
+
+                            if (string.Equals(enumInteger.ToString(), enumIndex.ToString(), StringComparison.InvariantCulture))
+                            {
+                                return true;
+                            }
+
+                            return false;
+                        }, out var enumResult))
+                        {
+                            return new SuccessResult(enumResult);
+                        }
+                    }
+                    else
+                    {
+                        var result = Enum.Parse(type, value, true);
+
+                        if (result != null)
+                            return new SuccessResult(result);
+                        else
+                            return new ErrorResult($"Failed to parse enum: {value} ({type.FullName})");
+                    }
                 }
                 catch (Exception ex)
                 {
-                    return new ErrorResult($"Failed to parse {value} to {type.Name}: {ex.Message}");
+                    return new ErrorResult($"Failed to parse {value} to {type.Name}: \n{ex}");
                 }
             }
 
-            return new ErrorResult($"An unsupported type was provided to the simple type parser.");
+            return new ErrorResult($"An unsupported type was provided to the simple type parser: {type.FullName}");
         }
     }
 }

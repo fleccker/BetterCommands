@@ -1,7 +1,5 @@
 ﻿using System;
-using System.Collections;
 using System.Linq;
-using System.Text;
 using System.Reflection;
 
 using BetterCommands.Conditions;
@@ -12,15 +10,21 @@ using PluginAPI.Core;
 using PluginAPI.Loader;
 
 using helpers.Results;
-using helpers;
+using helpers.Pooling.Pools;
+
+using PluginAPI.Core.Interfaces;
+
+using System.Collections;
 
 namespace BetterCommands.Management
 {
     public class CommandData
     {
         public MethodInfo TargetMethod { get; }
+
         public Type DeclaringType { get; }
         public Type SenderType { get; }
+
         public PluginHandler Plugin { get; }
 
         public PermissionData Permissions { get; }
@@ -30,6 +34,8 @@ namespace BetterCommands.Management
 
         public string Name { get; }
         public string Description { get; }
+        public string Usage { get; }
+
         public string[] Aliases { get; }
 
         public object Handle { get; }
@@ -54,146 +60,114 @@ namespace BetterCommands.Management
             IsHidden = hidden;
 
             Handle = handle;
-        }
 
-        public IResult<string> Execute(string clearArgs, ReferenceHub sender)
-        {
-            if (Conditions != null && Conditions.Length > 0)
-            {
-                for (int i = 0; i < Conditions.Length; i++)
-                {
-                    var result = Conditions[i].Validate(sender);
+            var builder = StringBuilderPool.Pool.Get();
 
-                    if (!result.IsSuccess)
-                        return new ErrorResult<string>(result.As<ErrorResult>().Reason);
-                }
-            }
-
-            if (Permissions != null)
-            {
-                var permResult = Permissions.Validate(sender);
-
-                if (!permResult.IsSuccess) 
-                    return new ErrorResult<string>(permResult.As<ErrorResult>().Reason);
-            }
-
-            if (clearArgs != null)
-            {
-                if (Arguments.Any())
-                {
-                    var parseResult = CommandArgumentParser.Parse(this, clearArgs);
-                    
-                    if (parseResult is ErrorResult<object[]> error)
-                        return new ErrorResult<string>(error.Reason);
-
-                    var args = CreateArgs(sender);
-                    FillArgs(parseResult, args);
-                    return Invoke(args);
-                }
-                else
-                {
-                    return Invoke(CreateArgs(sender));
-                }
-            }
-            else
-            {
-                if (Arguments.Any())
-                {
-                    return new ErrorResult<string>($"Missing arguments!\n{GetUsage()}");
-                }
-                else
-                {
-                    return Invoke(CreateArgs(sender));
-                }
-            }
-        }
-
-        private void FillArgs(IResult<object[]> parseResult, object[] args)
-        {
-            for (int i = 0; i < args.Length; i++)
-            {
-                if (i is 0) 
-                    continue;
-
-                args[i] = parseResult.Result[i - 1];
-            }
-        }
-
-        private object[] CreateArgs(ReferenceHub sender)
-        {
-            var array = Arguments != null && Arguments.Length > 0 ? new object[Arguments.Length + 1] : new object[1];
-
-            for (int i = 0; i < array.Length; i++)
-            {
-                if (i is 0)
-                    array[0] = GetSenderObject(sender);
-                else 
-                    array[i] = null;
-            }
-
-            return array;
-        }
-
-        private object GetSenderObject(ReferenceHub sender)
-        {
-            if (SenderType == typeof(ReferenceHub))
-                return sender;
-            else if (SenderType == typeof(Player))
-                return Player.Get(sender);
-            else
-            {
-                if (FactoryManager.FactoryTypes.TryGetValue(SenderType, out var factoryType))
-                {
-                    if (FactoryManager.PlayerFactories.TryGetValue(factoryType, out var factory))
-                        return factory.GetOrAdd(sender);
-                    else
-                        throw new Exception($"Failed to parse sender ({SenderType.FullName}): missing player factory!");
-                }
-
-                throw new Exception($"Failed to parse sender ({SenderType.FullName}): missing player factory!");
-            }
-        }
-
-        private string GetUsage()
-        {
-            var builder = new StringBuilder();
-
-            builder.AppendLine($"<-- {Name} usage -->");
+            builder.AppendLine($"<color=#33FF4F>『{Name}』</color>");
 
             for (int i = 0; i < Arguments.Length; i++)
             {
                 if (!Arguments[i].IsOptional)
                 {
-                    builder.AppendLine($"[{i + 1}]: {Arguments[i].Name} [{Arguments[i].Type.Name}]");
+                    builder.AppendLine($"<color=#E3FF33>《{i + 1}》</color>: <color=#FFF333><b>{Arguments[i].Name}<b></color> 〔{Arguments[i].UserName}〕");
                 }
                 else
                 {
-                    builder.AppendLine($"[{i + 1}]: (optional) {Arguments[i].Name} [{Arguments[i].Type.Name}]; default: {Arguments[i].DefaultValue?.ToString() ?? "null"}");
+                    builder.AppendLine($"<color=#E3FF33>《{i + 1}》 ﹤optional﹥</color>: <color=#FFF333><b>{Arguments[i].Name}</b></color> <color=#33FCFF>〔{Arguments[i].UserName}〕</color>" +
+                                       $"\n    <b>default value: {Arguments[i].DefaultValue?.ToString() ?? "none"}</b>");
                 }
             }
 
-            return builder.ToString();
+            Usage = StringBuilderPool.Pool.PushReturn(builder);
         }
 
-        private IResult<string> Invoke(object[] args)
+        public IResult<string> Execute(string clearArgs, ReferenceHub sender)
         {
+            if (Permissions != null)
+            {
+                var permsResult = Permissions.Validate(sender);
+
+                if (!permsResult.IsSuccess)
+                    return new ErrorResult<string>($"Permissions failed:\n{permsResult.GetError()}");
+            }
+
+            if (Conditions != null)
+            {
+                for (int i = 0; i < Conditions.Length; i++)
+                {
+                    var condResult = Conditions[i].Validate(sender);
+
+                    if (!condResult.IsSuccess)
+                        return new ErrorResult<string>($"Condition {i} of {Conditions.Length} failed:\n{condResult.GetError()}");
+                }
+            }
+
+            var argList = ListPool<object>.Pool.Get();
+
+            if (SenderType == typeof(ReferenceHub))
+            {
+                argList.Add(sender);
+            }
+            else if (SenderType == typeof(IPlayer) || SenderType == typeof(Player))
+            {
+                if (!Player.TryGet(sender, out var player))
+                    return new ErrorResult<string>($"Failed to retrieve Player instance from ReferenceHub to pass as sender!");
+
+                argList.Add(player);
+            }
+            else
+            {
+                if (!FactoryManager.FactoryTypes.TryGetValue(SenderType, out var playerFactoryType))
+                    return new ErrorResult<string>($"Failed to find player factory type for player type: {SenderType.FullName}");
+
+                if (!FactoryManager.PlayerFactories.TryGetValue(playerFactoryType, out var factory))
+                    return new ErrorResult<string>($"Failed to find player factory for factory type: {playerFactoryType.FullName}");
+
+                var factoryResult = factory.GetOrAdd(sender);
+
+                if (factoryResult is null)
+                    return new ErrorResult<string>($"Factory {playerFactoryType.FullName} supplied an invalid result");
+
+                argList.Add(factoryResult);
+            }
+
+            var parseResult = CommandArgumentParser.Parse(this, clearArgs, sender);
+
+            if (!parseResult.IsSuccess)
+                return new ErrorResult<string>($"Failed to execute command {Name}:\n{parseResult.GetError()}");
+
+            for (int i = 0; i < parseResult.Result.Length; i++)
+            {
+                argList.Add(parseResult.Result[i]);
+            }
+
+            var args = argList.ToArray();
+
+            ListPool<object>.Pool.Push(argList);
+
             try
             {
-                var res = TargetMethod?.Invoke(Handle, args);
-                var str = "";
+                var excRes = TargetMethod?.Invoke(Handle, args);
 
-                if (res is null)
-                    str = "Empty response.";
-                else if (res is IEnumerable values)
-                    str = string.Join("\n", values);
+                if (excRes is null)
+                    return new SuccessResult<string>($"Command succesfully executed without output.");
                 else
-                    str = res.ToString();
+                {
+                    if (excRes is IResult<string> result)
+                        return result;
 
-                return new SuccessResult<string>(str);
+                    if (excRes is string str)
+                        return new SuccessResult<string>(str);
+
+                    if (excRes is IEnumerable objects)
+                        return new SuccessResult<string>(string.Join("\n", objects));
+
+                    return new SuccessResult<string>($"Command executed succesfully, but it returned an unsupported response type: {excRes} ({excRes.GetType().FullName})");
+                }
             }
             catch (Exception ex)
             {
-                return new ErrorResult<string>(ex.Message, ex);
+                return new ErrorResult<string>($"Failed to execute command {Name}:\n{ex}");
             }
         }
     }

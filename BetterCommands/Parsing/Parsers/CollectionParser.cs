@@ -1,9 +1,10 @@
-﻿using helpers.Results;
+﻿using HarmonyLib;
+
+using helpers;
+using helpers.Results;
 
 using System;
 using System.Collections;
-using System.Collections.Generic;
-using System.Linq;
 
 namespace BetterCommands.Parsing.Parsers
 {
@@ -14,162 +15,100 @@ namespace BetterCommands.Parsing.Parsers
         public static void Register()
         {
             CommandArgumentParser.AddParser(Instance, typeof(Array));
-            CommandArgumentParser.AddParser(Instance, typeof(IDictionary<,>));
-            CommandArgumentParser.AddParser(Instance, typeof(IEnumerable<>));
+            CommandArgumentParser.AddParser(Instance, typeof(IDictionary));
+            CommandArgumentParser.AddParser(Instance, typeof(IEnumerable));
         }
 
         public IResult<object> Parse(string value, Type type)
         {
+            var genericArgs = type.GetGenericArguments();
+
             if (type.IsArray)
             {
-                var elementType = GetElementType(type)[0];
+                var values = value.Split(',');
 
-                if (!CommandArgumentParser.TryGetParser(elementType, out var parser)) 
-                    return new ErrorResult($"Element of type {elementType.FullName} does not have a registered parser.");
+                if (!CommandArgumentParser.TryGetParser(genericArgs[0], out var parser))
+                    return new ErrorResult($"Failed to retrieve a parser for array element type: {genericArgs[0].FullName}");
 
-                if (!TrySplitList(value, out var split)) 
-                    return new ErrorResult($"Failed to parse array: failed to split string.");
+                var array = Array.CreateInstance(genericArgs[0], values.Length);
 
-                var list = new List<object>();
-                
-                foreach (var val in split)
+                for (int i = 0; i < values.Length; i++)
                 {
-                    var valResult = parser.Parse(val, elementType);
+                    var parseResult = parser.Parse(values[i], genericArgs[0]);
 
-                    if (valResult is ErrorResult) 
-                        return valResult;
-                    else 
-                        list.Add(valResult.Result);
+                    if (!parseResult.IsSuccess)
+                        return new ErrorResult($"Failed to parse argument at index {i}: {parseResult.GetError()}");
+
+                    array.SetValue(parseResult.Result, i);
                 }
 
-                return new SuccessResult(MakeArray(list.ToArray(), type));
+                return new SuccessResult(array);
             }
-            else if (type.IsSubclassOf(typeof(IDictionary<,>)))
+
+            var instance = Reflection.Instantiate(type);
+            if (instance is IDictionary dictionary)
             {
-                var pairType = GetElementType(type, true);
-                var keyType = pairType[0];
-                var valType = pairType[1];
+                var values = value.Split(';');
+                var keyArg = genericArgs[0];
+                var valueArg = genericArgs[1];
 
-                if (!CommandArgumentParser.TryGetParser(keyType, out var keyParser) || !CommandArgumentParser.TryGetParser(valType, out var valParser)) 
-                    return new ErrorResult($"Either the key or value type of {type.FullName} is not supported!");
+                if (!CommandArgumentParser.TryGetParser(keyArg, out var keyParser))
+                    return new ErrorResult($"Failed to retrieve a parser for dictionary key: {keyArg.FullName}");
 
-                var split = value.Any(x => x is ',') ? value.Split(',') : value.Split(' ');
-                var list = new List<KeyValuePair<object, object>>();
+                if (!CommandArgumentParser.TryGetParser(valueArg, out var valueParser))
+                    return new ErrorResult($"Failed to retrieve a parser for dictionary value: {valueArg.FullName}");
 
-                foreach (var val in split)
+                for (int i = 0; i < values.Length; i++)
                 {
-                    if (!TrySplitPair(val, out var pairs)) 
-                        return new ErrorResult($"Failed to split value {val} into a pair!");
+                    var pairValue = values[i];
+                    var dictValues = pairValue.Split(':');
 
-                    var keyStr = pairs[0];
-                    var valStr = pairs[1];
+                    if (dictValues.Length != 2)
+                    {
+                        return new ErrorResult($"Failed to split {pairValue} into a pair! (index: {i})");
+                    }
 
-                    var keyRes = keyParser.Parse(keyStr, keyType);
-                    var valRes = valParser.Parse(valStr, valType);
+                    var dictKey = dictValues[0];
+                    var dictValue = dictValues[1];
 
-                    if (keyRes is ErrorResult) 
-                        return keyRes;
+                    var keyParseResult = keyParser.Parse(dictKey, keyArg);
 
-                    if (valRes is ErrorResult) 
-                        return valRes;
+                    if (!keyParseResult.IsSuccess)
+                        return new ErrorResult($"Failed to parse key at index {i}: {keyParseResult.GetError()}");
 
-                    list.Add(new KeyValuePair<object, object>(keyRes.Result, valRes.Result));
+                    var valueParseResult = valueParser.Parse(dictValue, valueArg);
+
+                    if (!valueParseResult.IsSuccess)
+                        return new ErrorResult($"Failed to parse value at index {i}: {valueParseResult.GetError()}");
+
+                    dictionary[keyParseResult.Result] = valueParseResult.Result;
                 }
 
-                return new SuccessResult(MakeDictionary(list, type, keyType, valType));
+                return new SuccessResult(dictionary);
             }
-            else if (type.IsSubclassOf(typeof(IEnumerable<>)))
+            else if (instance is IList list)
             {
-                var elementType = GetElementType(type, true)[0];
+                var values = value.Split(',');
 
-                if (!CommandArgumentParser.TryGetParser(elementType, out var parser)) 
-                    return new ErrorResult($"Failed to retrieve a parser for element type: {elementType.FullName}");
+                if (!CommandArgumentParser.TryGetParser(genericArgs[0], out var parser))
+                    return new ErrorResult($"Failed to find a parser for list element type: {genericArgs[0].FullName}");
 
-                if (!TrySplitList(value, out var values)) 
-                    return new ErrorResult($"Failed to parse collection: failed to parse string into a list.");
-
-                var list = new List<object>();
-
-                foreach (var val in values)
+                for (int i = 0; i < values.Length; i++)
                 {
-                    var valRes = parser.Parse(val, elementType);
+                    var parseResult = parser.Parse(values[i], genericArgs[0]);
 
-                    if (valRes is ErrorResult) 
-                        return valRes;
-                    else 
-                        list.Add(valRes.Result);
+                    if (!parseResult.IsSuccess)
+                        return new ErrorResult($"Failed to parse element at index {i}: {parseResult.GetError()}");
+
+                    list.Add(parseResult.Result);
                 }
 
-                return new SuccessResult(MakeCollection(list, type));
+                return new SuccessResult(list);
             }
-            else 
-                return new ErrorResult($"An unsupported collection type was passed to the collection parser.");
-        }
-
-        private static object MakeArray(object[] array, Type type)
-        {
-            var arrayType = Activator.CreateInstance(type) as Array;
-
-            for (int i = 0; i < array.Length; i++) 
-                arrayType.SetValue(array[i], i);
-
-            return arrayType;
-        }
-
-        private static object MakeDictionary(IEnumerable<KeyValuePair<object, object>> pairs, Type dictType, Type keyType, Type valType)
-        {
-            var dict = Activator.CreateInstance(dictType) as IDictionary;
-
-            foreach (var pair in pairs) 
-                dict[pair.Key] = pair.Value;
-
-            return dict;
-        }
-
-        private static object MakeCollection(IEnumerable<object> list, Type collectionType)
-        {
-            var constructor = collectionType.GetConstructor(new Type[] { typeof(IEnumerable<object>) });
-
-            if (constructor is null) 
-                return null;
-            else 
-                return constructor.Invoke(new object[] { list });
-        }
-
-        private static Type[] GetElementType(Type collectionType, bool generics = false)
-        {
-            if (collectionType.IsArray) 
-                return new Type[] { collectionType.GetElementType() };
-            else if (generics) 
-                return collectionType.GetGenericArguments();
-            else 
-                return null;
-        }
-
-        private static bool TrySplitList(string value, out string[] values)
-        {
-            if (value.Count(x => x == ':') == 1) 
-                values = value.Split(':');
-            else if (value.Count(x => x == ';') == 1) 
-                values = value.Split(';');
-            else 
-                values = value.Split(' ');
-
-            return values != null && value.Length > 0;
-        }
-
-        private static bool TrySplitPair(string value, out string[] pairs)
-        {
-            if (value.Count(x => x == ':') == 1) 
-                pairs = value.Split(':');
-            else if (value.Count(x => x == '=') == 1) 
-                pairs = value.Split('=');
-            else if (value.Count(x => x == ';') == 1) 
-                pairs = value.Split(';');
-            else 
-                pairs = value.Split(' ');
-
-            return pairs != null && pairs.Length == 2;
+            else
+            {
+                return new ErrorResult($"Failed to parse collection: unsupported! {type.FullDescription()}");
+            }
         }
     }
 }

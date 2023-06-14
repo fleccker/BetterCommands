@@ -1,11 +1,7 @@
-﻿using PluginAPI.Core;
-using PluginAPI.Loader;
+﻿using PluginAPI.Loader;
+
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace BetterCommands.Support.Compendium
 {
@@ -29,7 +25,7 @@ namespace BetterCommands.Support.Compendium
         private static Func<string, string> _uniqueIdToIpDelegate;
         private static bool _uniqueIdToIpDelegateRetrieved;
 
-        public const string CacheManagerFullName = "";
+        public const string CacheManagerFullName = "Compendium.Helpers.Caching.CacheManager";
 
         public static bool IsAvailable
         {
@@ -70,7 +66,9 @@ namespace BetterCommands.Support.Compendium
                     if (!_cacheManagerTypeRetrieved)
                     {
                         _cacheManagerTypeRetrieved = true;
-                        if (Assembly != null) _cacheManagerType = _assembly.GetType(CacheManagerFullName);
+
+                        if (Assembly != null) 
+                            _cacheManagerType = _assembly.GetType(CacheManagerFullName);
                     }
                 }
 
@@ -86,7 +84,7 @@ namespace BetterCommands.Support.Compendium
                 {
                     if (!_uniqueIdMethodRetrieved)
                     {
-                        _uniqueIdMethod = CacheManagerType?.GetMethod("GetPlayerId");
+                        _uniqueIdMethod = CacheManagerType?.GetMethod("GetOrAddId");
                         _uniqueIdMethodRetrieved = true;
                     }
                 }
@@ -121,7 +119,9 @@ namespace BetterCommands.Support.Compendium
                     if (!_uniqueIdDelegateRetrieved)
                     {
                         _uniqueIdDelegateRetrieved = true;
-                        if (UniqueIdMethod != null) _uniqueIdDelegate = Delegate.CreateDelegate(typeof(Func<ReferenceHub, string>), UniqueIdMethod) as Func<ReferenceHub, string>;
+
+                        if (UniqueIdMethod != null) 
+                            _uniqueIdDelegate = Delegate.CreateDelegate(typeof(Func<ReferenceHub, string>), UniqueIdMethod) as Func<ReferenceHub, string>;
                     }
                 }
 
@@ -138,7 +138,9 @@ namespace BetterCommands.Support.Compendium
                     if (!_uniqueIdToIpDelegateRetrieved)
                     {
                         _uniqueIdToIpDelegateRetrieved = true;
-                        if (UniqueIdToIpMethod != null) _uniqueIdToIpDelegate = Delegate.CreateDelegate(typeof(Func<string, string>), UniqueIdToIpMethod) as Func<string, string>;
+
+                        if (UniqueIdToIpMethod != null) 
+                            _uniqueIdToIpDelegate = Delegate.CreateDelegate(typeof(Func<string, string>), UniqueIdToIpMethod) as Func<string, string>;
                     }
                 }
 
@@ -150,7 +152,8 @@ namespace BetterCommands.Support.Compendium
         {
             uniqueId = null;
 
-            if (UniqueIdDelegate is null) return false;
+            if (UniqueIdDelegate is null) 
+                return false;
 
             uniqueId = UniqueIdDelegate(hub);
             return true;
@@ -160,7 +163,8 @@ namespace BetterCommands.Support.Compendium
         {
             ip = null;
 
-            if (UniqueIdToIpDelegate is null) return false;
+            if (UniqueIdToIpDelegate is null) 
+                return false;
 
             ip = UniqueIdToIpDelegate(id);
             return true;

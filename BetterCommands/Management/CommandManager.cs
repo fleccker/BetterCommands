@@ -54,7 +54,12 @@ namespace BetterCommands.Management
                     {
                         methodArgs.ForEach(arg =>
                         {
-                            args.Add(new CommandArgumentData(arg.ParameterType, arg.Name, arg.HasDefaultValue, arg.DefaultValue));
+                            var attribute = arg.GetCustomAttribute<LookingAtAttribute>();
+
+                            if (attribute is null)
+                                args.Add(new CommandArgumentData(arg.ParameterType, arg.Name, arg.HasDefaultValue, false, 0f, 0, arg.DefaultValue));
+                            else
+                                args.Add(new CommandArgumentData(arg.ParameterType, arg.Name, arg.HasDefaultValue, true, attribute.GetDistance(), attribute.GetMask(), arg.DefaultValue));
                         });
                     }
 
@@ -155,21 +160,29 @@ namespace BetterCommands.Management
                 return false;
             }
 
-            response = $"{cmd.Name.ToUpper()}#";
+            response = $"{cmd.Name.ToUpper()}#\n<color=#33FFD7>";
 
             var result = cmd.Execute(string.Join(" ", args.Skip(1)), sender);
 
             if (!result.IsSuccess)
             {
                 var error = result.As<ErrorResult<string>>();
+                var errorReason = error.Reason;
 
-                sender.characterClassManager.ConsolePrint($"[Command Output] {error.Reason}", "red");
-                response += $"Command execution failed!\n{error.Reason}";
+                ColorUtils.ColorMatchError(ref errorReason, false);
+
+                sender.characterClassManager.ConsolePrint($"[Command Output] {errorReason}", "red");
+                response += $"Command execution <color=red>failed</color>!\n<color=red>{errorReason}</color>";
 
                 if (error.Exception != null)
                 {
-                    sender.characterClassManager.ConsolePrint($"[Command Exception] {error.Exception}", "red");
-                    response += $"Exception:\n{error.Exception}";
+                    var exceptionStr = error.Exception.ToString();
+
+                    ColorUtils.ColorMatchError(ref exceptionStr, true);
+
+                    sender.characterClassManager.ConsolePrint($"[Command Exception] {exceptionStr}", "red");
+                    response += $"Exception:\n{exceptionStr}";
+                    response += "</color>";
                 }
 
                 return true;
@@ -177,6 +190,7 @@ namespace BetterCommands.Management
             else
             {
                 response += result.Result;
+                response += "</color>";
                 sender.characterClassManager.ConsolePrint($"[Command Output] {response}", "red");
                 
                 return true;
