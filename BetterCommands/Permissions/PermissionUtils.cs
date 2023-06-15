@@ -8,8 +8,11 @@ namespace BetterCommands.Permissions
         {
             groupKey = null;
 
-            if (ServerStatic.PermissionsHandler is null) return false;
-            if (ServerStatic.PermissionsHandler._members.TryGetValue(hub.characterClassManager.UserId, out groupKey)) return true;
+            if (ServerStatic.PermissionsHandler is null) 
+                return false;
+
+            if (ServerStatic.PermissionsHandler._members.TryGetValue(hub.characterClassManager.UserId, out groupKey)) 
+                return true;
 
             return false;
         }
@@ -18,8 +21,10 @@ namespace BetterCommands.Permissions
         {
             var split = hub.characterClassManager.UserId.Split('@');
 
-            if (split.Length > 1) clearId = split[0];
-            else clearId = null;
+            if (split.Length > 1) 
+                clearId = split[0];
+            else 
+                clearId = null;
 
             return !string.IsNullOrWhiteSpace(clearId);
         }
@@ -32,31 +37,42 @@ namespace BetterCommands.Permissions
 
                 for (int i = 0; i < nodes.Length; i++)
                 {
-                    if (!ContainsNode(nodes[i], availableNodes)) return false;
+                    if (!ContainsNode(nodes[i], availableNodes)) 
+                        return false;
                 }
 
                 return true;
             }
             else
             {
-                if (nodes.Any(x => ContainsNode(x, availableNodes))) return true;
+                if (nodes.Any(x => ContainsNode(x, availableNodes))) 
+                    return true;
+
                 return false;
             }
         }
 
         public static bool ContainsNode(string node, string[] availableNodes)
         {
-            if (availableNodes.Any(x => x == "*")) return true;
-            if (availableNodes.Any(x => x == node)) return true;
+            if (availableNodes.Any(x => x == "*")) 
+                return true;
+
+            if (availableNodes.Any(x => x == node)) 
+                return true;
 
             var split = node.Split('.');
+
             if (split.Length > 1)
             {
                 for (int i = 0; i < split.Length; i++)
                 {
                     var curNode = split[i];
-                    if (availableNodes.Any(x => x == $"{curNode}.*")) return true;
-                    if (availableNodes.Any(x => x == $"*.{curNode}")) return true;
+
+                    if (availableNodes.Any(x => x == $"{curNode}.*")) 
+                        return true;
+
+                    if (availableNodes.Any(x => x == $"*.{curNode}"))
+                        return true;
                 }
             }
 

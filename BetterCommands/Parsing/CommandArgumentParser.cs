@@ -5,6 +5,9 @@ using System;
 using System.Collections.Generic;
 
 using BetterCommands.Parsing.Parsers;
+using BetterCommands.Arguments.Effects;
+using BetterCommands.Arguments.Prefabs;
+using BetterCommands.Arguments;
 
 using Interactables.Interobjects.DoorUtils;
 
@@ -20,10 +23,9 @@ using System.Collections;
 
 using MapGeneration;
 
-using BetterCommands.Arguments.Effects;
 using UnityEngine;
+
 using Mirror;
-using BetterCommands.Arguments.Prefabs;
 
 namespace BetterCommands.Parsing
 {
@@ -33,6 +35,10 @@ namespace BetterCommands.Parsing
 
         static CommandArgumentParser()
         {
+            AdminToyParser.Register();
+            CollectionParser.Register();
+            SimpleParser.Register();
+
             AddParser<PlayerParser>(typeof(IPlayer));
             AddParser<DoorParser>(typeof(DoorVariant));
             AddParser<ReferenceHubParser>(typeof(ReferenceHub));
@@ -41,27 +47,23 @@ namespace BetterCommands.Parsing
             AddParser<GameObjectParser>(typeof(GameObject));
             AddParser<NetworkIdentityParser>(typeof(NetworkIdentity));
             AddParser<PrefabParser>(typeof(PrefabData));
-
-            AdminToyParser.Register();
-            SimpleParser.Register();
-            CollectionParser.Register();
         }
 
         public static ICommandArgumentParser GetParser(Type type) => TryGetParser(type, out var parser) ? parser : null;
 
         public static bool TryGetParser(Type argType, out ICommandArgumentParser commandArgumentParser)
         {
-            if (Reflection.HasInterface<IPlayer>(argType, true)) 
+            if (Reflection.HasInterface<IPlayer>(argType)) 
                 argType = typeof(IPlayer);
-            else if (Reflection.HasType<DoorVariant>(argType, true)) 
+            else if (Reflection.HasType<DoorVariant>(argType)) 
                 argType = typeof(DoorVariant);
             else if (argType.IsEnum) 
                 argType = typeof(Enum);
             else if (argType.IsArray)
                 argType = typeof(Array);
-            else if (Reflection.HasInterface<IDictionary>(argType, true)) 
+            else if (Reflection.HasInterface<IDictionary>(argType)) 
                 argType = typeof(IDictionary);
-            else if (Reflection.HasInterface<IEnumerable>(argType, true)) 
+            else if (Reflection.HasInterface<IEnumerable>(argType) && argType != typeof(string)) 
                 argType = typeof(IEnumerable);
             
             return _knownParsers.TryGetValue(argType, out commandArgumentParser) && commandArgumentParser != null;
@@ -85,7 +87,7 @@ namespace BetterCommands.Parsing
                 if (!stringParseResult.IsSuccess)
                     return new ErrorResult<object[]>($"Failed to parse string into arguments: {stringParseResult.GetError()}");
 
-                if (command.Arguments.Count(arg => !arg.IsOptional && !arg.IsLookingAt) != stringParseResult.Result.Length)
+                if (command.Arguments.Count(arg => !arg.IsOptional && !arg.IsLookingAt && arg.Type != typeof(CommandArguments)) != stringParseResult.Result.Length)
                     return new ErrorResult<object[]>($"<color=red>Missing arguments!</color>\n{command.Usage}");
 
                 var results = ListPool<object>.Pool.Get();
@@ -105,10 +107,20 @@ namespace BetterCommands.Parsing
                         }
                     }
 
+                    if (arg.Type == typeof(CommandArguments))
+                    {
+                        var cmdArgs = new CommandArguments();
+                        cmdArgs.Parse(stringParseResult.Result[i]);
+                        results.Add(cmdArgs);
+                        continue;
+                    }
+
                     if (i >= stringParseResult.Result.Length)
                     {
                         if (arg.IsOptional)
                             results.Add(arg.DefaultValue);
+                        else if (arg.Type == typeof(CommandArguments))
+                            results.Add(new CommandArguments());
                         else
                             return new ErrorResult<object[]>($"<color=red>Missing arguments!</color>\n{command.Usage}");
                     }
@@ -118,9 +130,29 @@ namespace BetterCommands.Parsing
                         var parserResult = arg.Parse(value);
 
                         if (!parserResult.IsSuccess)
-                            return new ErrorResult<object[]>($"Failed to parse argument {arg.Name} at index {i}:\n{parserResult.GetError()}");
+                            return new ErrorResult<object[]>($"Failed to parse argument {arg.Name} at index {i}:\n      {parserResult.GetError()}");
                         else
+                        {
+                            if (arg.RestrictionMode != ValueRestrictionMode.None && arg.RestrictedValues != null && arg.RestrictedValues.Any())
+                            {
+                                if (arg.RestrictionMode is ValueRestrictionMode.Blacklist)
+                                {
+                                    if (arg.RestrictedValues.Contains(parserResult.Result))
+                                    {
+                                        return new ErrorResult<object[]>($"Value {parserResult.Result} is restricted from parameter {arg.Name} (index: {i}) [blacklisted values: {string.Join(", ", arg.RestrictedValues)}");
+                                    }
+                                }
+                                else
+                                {
+                                    if (!arg.RestrictedValues.Contains(parserResult.Result))
+                                    {
+                                        return new ErrorResult<object[]>($"Value {parserResult.Result} is restricted from parameter {arg.Name} (index: {i}) [whitelisted values: {string.Join(", ", arg.RestrictedValues)}");
+                                    }
+                                }
+                            }
+
                             results.Add(parserResult.Result);
+                        }
                     }
                 }
 

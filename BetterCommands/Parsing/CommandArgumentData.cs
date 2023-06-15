@@ -12,6 +12,9 @@ namespace BetterCommands.Parsing
 
         public ICommandArgumentParser Parser { get; }
 
+        public ValueRestrictionMode RestrictionMode { get; }
+        public object[] RestrictedValues { get; }
+
         public string Name { get; }
         public string UserName { get; }
 
@@ -23,9 +26,10 @@ namespace BetterCommands.Parsing
         public float LookingAtDistance { get; }
         public int LookingAtMask { get; }
 
-        public IResult<object> Parse(string value) => Parser.Parse(value, Type);
+        public IResult<object> Parse(string value) 
+            => Parser.Parse(value, Type);
 
-        public CommandArgumentData(Type argType, string argName, bool optional, bool lookingAt, float lookingDistance, int lookingMask, object defaultValue)
+        public CommandArgumentData(Type argType, string argName, bool optional, bool lookingAt, float lookingDistance, int lookingMask, object defaultValue, ValueRestrictionMode mode, object[] restrictedValues)
         {
             Type = argType;
             Name = argName;
@@ -33,7 +37,13 @@ namespace BetterCommands.Parsing
             IsOptional = optional;
             IsLookingAt = lookingAt;
 
+            LookingAtDistance = lookingDistance;
+            LookingAtMask = lookingMask;
+
             DefaultValue = defaultValue;
+
+            RestrictionMode = mode;
+            RestrictedValues = restrictedValues;
 
             UserName = ArgumentUtils.GetFriendlyName(Type);
 

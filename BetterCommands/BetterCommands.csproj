@@ -80,24 +80,25 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Arguments\CommandArguments.cs" />
     <Compile Include="Arguments\Effects\EffectData.cs" />
     <Compile Include="Arguments\Prefabs\PrefabData.cs" />
     <Compile Include="Arguments\Toys\ToyAllowedNewArgumentData.cs" />
     <Compile Include="Arguments\Toys\ToyDisallowedNewArgumentData.cs" />
-    <Compile Include="CommandAliasesAttribute.cs" />
-    <Compile Include="CommandAttribute.cs" />
+    <Compile Include="Attributes\Commands\CommandAliasesAttribute.cs" />
+    <Compile Include="Attributes\Commands\CommandAttribute.cs" />
     <Compile Include="Conditions\ConditionAttribute.cs" />
     <Compile Include="Conditions\ConditionData.cs" />
     <Compile Include="Conditions\ConditionFlag.cs" />
     <Compile Include="Config.cs" />
-    <Compile Include="DescriptionAttribute.cs" />
+    <Compile Include="Attributes\Commands\DescriptionAttribute.cs" />
     <Compile Include="Loader.cs" />
-    <Compile Include="LookingAtAttribute.cs" />
+    <Compile Include="Attributes\Parameters\LookingAtAttribute.cs" />
     <Compile Include="Management\CommandData.cs" />
     <Compile Include="Management\CommandManager.cs" />
     <Compile Include="Management\CommandType.cs" />
-    <Compile Include="Parsing\ArgumentUtils.cs" />
-    <Compile Include="Parsing\ColorUtils.cs" />
+    <Compile Include="Parsing\Utils\ArgumentUtils.cs" />
+    <Compile Include="Parsing\Utils\ColorUtils.cs" />
     <Compile Include="Parsing\CommandArgumentData.cs" />
     <Compile Include="Parsing\CommandArgumentParser.cs" />
     <Compile Include="Parsing\ICommandArgumentParser.cs" />
@@ -124,6 +125,8 @@
     <Compile Include="Permissions\PermissionUtils.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Support\Compendium\CompendiumSupport.cs" />
+    <Compile Include="Attributes\Values\ValueRestrictionAttribute.cs" />
+    <Compile Include="Attributes\Values\ValueRestrictionMode.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

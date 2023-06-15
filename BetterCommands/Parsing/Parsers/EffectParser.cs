@@ -28,7 +28,7 @@ namespace BetterCommands.Parsing.Parsers
                         if (type.Namespace != "CustomPlayerEffects")
                             continue;
 
-                        if (!Reflection.HasType<StatusEffectBase>(type, true))
+                        if (!Reflection.HasType<StatusEffectBase>(type))
                             continue;
 
                         m_Effects.Add(type);

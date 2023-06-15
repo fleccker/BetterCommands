@@ -1,7 +1,5 @@
 ﻿using BetterCommands.Management;
 
-using helpers.Values;
-
 using System;
 
 namespace BetterCommands
@@ -9,22 +7,23 @@ namespace BetterCommands
     [AttributeUsage(AttributeTargets.Method, AllowMultiple = false, Inherited = false)]
     public class CommandAttribute : Attribute
     {
-        private FlagEnumValue<CommandType> m_Type = new FlagEnumValue<CommandType>();
+        private CommandType[] m_Types;
 
         public string Name { get; }
+
         public bool IsHidden { get; }
-        public CommandType Types => m_Type.Flags;
+
+        public CommandType[] Types => m_Types;
 
         public CommandAttribute(object name, params CommandType[] types)
         {
             Name = name?.ToString() ?? null;
             IsHidden = false;
 
-            foreach (var type in types)
-                m_Type.WithFlag(type);
+            m_Types = types;
 
-            if (m_Type.HasFlag(CommandType.RemoteAdmin) && !types.Contains(CommandType.RemoteAdmin))
-                m_Type.WithoutFlag(CommandType.RemoteAdmin);
+            if (m_Types is null)
+                m_Types = Array.Empty<CommandType>();
         }
 
         public CommandAttribute(object name, bool hidden, params CommandType[] types)
@@ -32,11 +31,10 @@ namespace BetterCommands
             Name = name?.ToString() ?? null;
             IsHidden = hidden;
 
-            foreach (var type in types)
-                m_Type.WithFlag(type);
+            m_Types = types;
 
-            if (m_Type.HasFlag(CommandType.RemoteAdmin) && !types.Contains(CommandType.RemoteAdmin))
-                m_Type.WithoutFlag(CommandType.RemoteAdmin);
+            if (m_Types is null)
+                m_Types = Array.Empty<CommandType>();
         }
     }
 }

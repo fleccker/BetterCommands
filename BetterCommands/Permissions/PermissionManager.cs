@@ -1,4 +1,12 @@
 ﻿using BetterCommands.Support.Compendium;
+using BetterCommands.Management;
+
+using helpers.Extensions;
+
+using System.Collections.Generic;
+using System.Linq;
+
+using PluginAPI.Core.Interfaces;
 
 namespace BetterCommands.Permissions
 {
@@ -50,9 +58,118 @@ namespace BetterCommands.Permissions
             return false;
         }
 
-        public static void AddNode(PermissionLevel level, params string[] nodes)
+        public static void AssignLevel(string target, PermissionLevel level)
         {
+            Config.LevelsByPlayer[target] = level;
+            Loader.SaveConfig();
+        }
 
+        public static void RemoveLevel(string target)
+        {
+            if (Config.LevelsByPlayer.Remove(target))
+            {
+                Loader.SaveConfig();
+            }
+        }
+
+        public static void AddNodes(string target, params string[] nodes)
+        {
+            var nodeList = new List<string>();
+
+            if (Config.NodesByPlayer.TryGetValue(target, out var activeNodes))
+            {
+                nodeList.AddRange(nodes);
+            }
+
+            nodeList.AddRange(nodes.Where(node => !nodeList.Contains(node)));
+            nodeList = nodeList.OrderByDescending(node => node).ToList();
+
+            Config.NodesByPlayer[target] = nodeList.ToArray();
+
+            Loader.SaveConfig();
+        }
+
+        public static void AddNodes(PermissionLevel level, params string[] nodes)
+        {
+            var nodeList = new List<string>();
+
+            if (Config.NodesByLevel.TryGetValue(level, out var activeNodes))
+            {
+                nodeList.AddRange(nodes);
+            }
+
+            nodeList.AddRange(nodes.Where(node => !nodeList.Contains(node)));
+            nodeList = nodeList.OrderByDescending(node => node).ToList();
+
+            Config.NodesByLevel[level] = nodeList.ToArray();
+
+            Loader.SaveConfig();
+        }
+
+        public static void RemoveNodes(string target, params string[] nodes)
+        {
+            var nodeList = new List<string>();
+
+            if (Config.NodesByPlayer.TryGetValue(target, out var activeNodes))
+            {
+                nodeList.AddRange(nodes);
+            }
+
+            nodes.ForEach(node => nodeList.Remove(node));
+            nodeList = nodeList.OrderByDescending(node => node).ToList();
+
+            Config.NodesByPlayer[target] = nodeList.ToArray();
+
+            Loader.SaveConfig();
+        }
+
+        public static void RemoveNodes(PermissionLevel level, params string[] nodes)
+        {
+            var nodeList = new List<string>();
+
+            if (Config.NodesByLevel.TryGetValue(level, out var activeNodes))
+            {
+                nodeList.AddRange(nodes);
+            }
+
+            nodes.ForEach(node => nodeList.Remove(node));
+            nodeList = nodeList.OrderByDescending(node => node).ToList();
+
+            Config.NodesByLevel[level] = nodeList.ToArray();
+
+            Loader.SaveConfig();
+        }
+
+        [Command("perms_add_nodes", CommandType.RemoteAdmin, CommandType.GameConsole)]
+        [Permission(PermissionLevel.Administrator)]
+        private static string AddNodesCommand(IPlayer sender, PermissionLevel level, string[] nodes)
+        {
+            AddNodes(level, nodes);
+            return $"Added nodes to {level}: {string.Join(",", nodes)}";
+        }
+
+        [Command("perms_remove_nodes", CommandType.RemoteAdmin, CommandType.GameConsole)]
+        [Permission(PermissionLevel.Administrator)]
+        private static string RemoveNodesCommand(IPlayer sender, PermissionLevel level, string[] nodes)
+        {
+            RemoveNodes(level, nodes);
+            return $"Removed nodes from {level}: {string.Join(",", nodes)}";
+        }
+
+        [Command("perms_assign_level", CommandType.RemoteAdmin, CommandType.GameConsole)]
+        [Permission(PermissionLevel.Administrator)]
+        private static string AssignLevelCommand(IPlayer sender, PermissionLevel level, string target)
+        {
+            AssignLevel(target, level);
+            return $"Added level {level} to target: {target}";
+        }
+
+        [Command("perms_remove_level", CommandType.RemoteAdmin, CommandType.GameConsole)]
+        [Permission(PermissionLevel.Administrator)]
+        private static string RemoveLevelCommand(IPlayer sender, string target)
+        {
+            RemoveLevel(target);
+            return $"Removed level from target: {target}";
         }
     }
 }

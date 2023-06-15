@@ -8,9 +8,9 @@ using PluginAPI.Loader;
 using BetterCommands.Management;
 
 using System.Reflection;
-using System.Collections.Generic;
-using System.Linq;
-using UnityEngine;
+
+using PluginAPI.Core.Interfaces;
+using BetterCommands.Permissions;
 
 namespace BetterCommands
 {
@@ -30,7 +30,7 @@ namespace BetterCommands
             "1.0.0",
             "Introduces a new command system for plugins to use.",
             "fleccker")]
-        [PluginPriority(LoadPriority.Lowest)]
+        [PluginPriority(LoadPriority.Highest)] // why is it reversed, bruh
         public void Load()
         {
             Instance = this;
@@ -39,44 +39,48 @@ namespace BetterCommands
             Log.Info($"Patching ..", "Better Commands");
 
             HarmonyInstance = new Harmony($"fleccker.bettercmds");
-            HarmonyInstance.PatchAll();
+            HarmonyInstance.PatchAll();           
 
             Log.Info($"Patched", "Better Commands");
+
+            Reload();
+        }
+
+        [PluginReload]
+        public void Reload()
+        {
+            CommandManager.UnregisterAll();
+
+            LoadConfig();
+
             Log.Info($"Searching for commands ..", "Better Commands");
 
             CommandManager.Register(HandlerInstance._entryPoint.DeclaringType.Assembly);
 
             foreach (var plugin in AssemblyLoader.Plugins.Keys)
             {
-                Log.Debug($"Registering plugin: {plugin.GetName().Name}", Config.IsDebugEnabled, "Command Manager");
-                if (plugin != Assembly.GetExecutingAssembly()) CommandManager.Register(plugin);
+                if (plugin != Assembly.GetExecutingAssembly())
+                    CommandManager.Register(plugin);
             }
 
-            Log.Info($"Search completed (found {CommandManager.Commands[Management.CommandType.RemoteAdmin].Count} remote admin commands; {CommandManager.Commands[Management.CommandType.GameConsole].Count} console commands and {CommandManager.Commands[Management.CommandType.PlayerConsole].Count} player commands).", "Better Commands");
-        }
-
-        [PluginReload]
-        public void Reload()
-        {
-
+            Log.Info($"Search completed (found {CommandManager.Commands[CommandType.RemoteAdmin].Count} remote admin commands; {CommandManager.Commands[CommandType.GameConsole].Count} console commands and {CommandManager.Commands[CommandType.PlayerConsole].Count} player commands).", "Better Commands");
         }
 
         [PluginUnload]
         public void Unload()
         {
-
+            SaveConfig();
         }
 
         public static void SaveConfig() => Handler.SaveConfig(Instance, "ConfigInstance");
         public static void LoadConfig() => Handler.LoadConfig(Instance, "ConfigInstance");
 
-        [Command("testcommand", Management.CommandType.RemoteAdmin, Management.CommandType.PlayerConsole, Management.CommandType.GameConsole)]
-        public static string TestCommand(ReferenceHub sender, Dictionary<string, int> values, KeyCode key)
+        [Command("bc_reload", CommandType.RemoteAdmin, CommandType.GameConsole)]
+        [Permission(PermissionLevel.Administrator)]
+        private static string ReloadCommand(IPlayer sender)
         {
-            return $"\n" +
-                $"Sender: {sender.LoggedNameFromRefHub()}\n" +
-                $"Values: {string.Join(" | ", values.Select(pair => $"{pair.Key}: {pair.Value}"))}\n" +
-                $"Key: {key}";
+            Instance.Reload();
+            return "Reloaded Better Commands!";
         }
     }
 }

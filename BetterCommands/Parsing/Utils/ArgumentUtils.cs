@@ -4,7 +4,7 @@ using BetterCommands.Arguments.Effects;
 using BetterCommands.Arguments.Prefabs;
 using BetterCommands.Arguments.Toys;
 using BetterCommands.Parsing.Parsers;
-
+using HarmonyLib;
 using helpers;
 using helpers.Extensions;
 using helpers.Results;
@@ -64,24 +64,24 @@ namespace BetterCommands.Parsing
         {
             var origType = type;
 
-            if (Reflection.HasInterface<IPlayer>(type, true))
+            if (Reflection.HasInterface<IPlayer>(type))
             {
                 type = typeof(IPlayer);
             }
 
-            if (Reflection.HasInterface<IDictionary>(type, true))
+            if (Reflection.HasInterface<IDictionary>(type))
             {
                 type = typeof(IDictionary);
-            }
-
-            if (Reflection.HasInterface<IEnumerable>(type, true) && type != typeof(IDictionary))
-            {
-                type = typeof(IEnumerable);
             }
 
             if (type.IsArray)
             {
                 type = typeof(Array);
+            }
+
+            if (Reflection.HasInterface<IEnumerable>(type) && type != typeof(IDictionary) && type != typeof(string) && type != typeof(Array))
+            {
+                type = typeof(IEnumerable);
             }
 
             if (type.IsEnum)
@@ -115,24 +115,34 @@ namespace BetterCommands.Parsing
 
         public static void ReplaceValues(ref string str, Type type, Type origType)
         {
+            var genericArgs = origType.GetGenericArguments();
+
             if (type == typeof(Enum))
             {
                 var enumValues = Enum.GetValues(origType);
-                str = str.Replace("%values%", string.Join(", ", enumValues));
-                return;
-            }
+                var array = new object[enumValues.Length];
 
-            if (type == typeof(Array) || type == typeof(IEnumerable))
-            {
-                var genericArgs = origType.GetGenericArguments();
-                str = str.Replace("%valueType%", GetFriendlyName(genericArgs[0]));
+                enumValues.CopyTo(array, 0);
+
+                str = str.Replace("%values%", string.Join(", ", array.Select(x => x.ToString())));
                 return;
             }
 
             if (type == typeof(IDictionary))
             {
-                var genericArgs = origType.GetGenericArguments();
                 str = str.Replace("%keyType%", GetFriendlyName(genericArgs[0])).Replace("%valueType%", GetFriendlyName(genericArgs[1]));
+                return;
+            }
+
+            if (type == typeof(Array))
+            {
+                str = str.Replace("%valueType%", GetFriendlyName(origType.GetElementType()));
+                return;
+            }
+
+            if (type == typeof(IEnumerable))
+            {
+                str = str.Replace("%valueType%", GetFriendlyName(genericArgs[0]));
                 return;
             }
 

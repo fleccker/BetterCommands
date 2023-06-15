@@ -1,8 +1,5 @@
-﻿using System;
-
-namespace BetterCommands.Management
+﻿namespace BetterCommands
 {
-    [Flags]
     public enum CommandType
     {
         RemoteAdmin,

@@ -30,11 +30,13 @@ namespace BetterCommands.Management
             [CommandType.PlayerConsole] = new HashSet<CommandData>()
         };
 
+        private static readonly BindingFlags AllBindingFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.Instance;
+
         public static IReadOnlyDictionary<CommandType, HashSet<CommandData>> Commands => _commandsByType;
 
         public static void Register() => Register(Assembly.GetCallingAssembly());
         public static void Register(Assembly assembly) => assembly.GetTypes().ForEach(x => Register(x, null));
-        public static void Register(Type type, object handle) => type.GetMethods().ForEach(x => Register(x, handle));
+        public static void Register(Type type, object handle) => type.GetMethods(AllBindingFlags).ForEach(x => Register(x, handle));
         public static void Register(MethodInfo method, object handle)
         {
             try
@@ -45,8 +47,13 @@ namespace BetterCommands.Management
                     var methodArgs = method.GetParameters();
 
                     if (methodArgs is null || !methodArgs.Any() ||
-                        (!Reflection.HasInterface<IPlayer>(methodArgs[0].ParameterType, true) && methodArgs[0].ParameterType != typeof(ReferenceHub)))
+                        (!Reflection.HasInterface<IPlayer>(methodArgs[0].ParameterType) 
+                        && methodArgs[0].ParameterType != typeof(ReferenceHub))
+                        && methodArgs[0].ParameterType != typeof(IPlayer))
+                    {
+                        Log.Warning($"Plugin {method.DeclaringType.Assembly.GetName().Name} has a method ({method.DeclaringType.FullName}::{method.Name}) marked as a command, but it's arguments are invalid! The first parameter has to be either an IPlayer implementation or ReferenceHub!", "Command Manager");
                         return;
+                    }
 
                     methodArgs = methodArgs.Skip(1).ToArray();
 
@@ -55,11 +62,12 @@ namespace BetterCommands.Management
                         methodArgs.ForEach(arg =>
                         {
                             var attribute = arg.GetCustomAttribute<LookingAtAttribute>();
+                            var restriction = arg.GetCustomAttribute<ValueRestrictionAttribute>();
 
                             if (attribute is null)
-                                args.Add(new CommandArgumentData(arg.ParameterType, arg.Name, arg.HasDefaultValue, false, 0f, 0, arg.DefaultValue));
+                                args.Add(new CommandArgumentData(arg.ParameterType, arg.Name, arg.HasDefaultValue, false, 0f, 0, arg.DefaultValue, restriction?.GetMode() ?? ValueRestrictionMode.None, restriction?.GetValues() ?? Array.Empty<object>()));
                             else
-                                args.Add(new CommandArgumentData(arg.ParameterType, arg.Name, arg.HasDefaultValue, true, attribute.GetDistance(), attribute.GetMask(), arg.DefaultValue));
+                                args.Add(new CommandArgumentData(arg.ParameterType, arg.Name, arg.HasDefaultValue, true, attribute.GetDistance(), attribute.GetMask(), arg.DefaultValue, restriction?.GetMode() ?? ValueRestrictionMode.None, restriction?.GetValues() ?? Array.Empty<object>()));
                         });
                     }
 
@@ -92,13 +100,13 @@ namespace BetterCommands.Management
 
                     var cmdData = new CommandData(method, perms, conditions, cmdArgs, commandAttribute.Name, description, aliases, commandAttribute.IsHidden, handle);
 
-                    if (commandAttribute.Types.HasFlag(CommandType.RemoteAdmin))
+                    if (commandAttribute.Types.Contains(CommandType.RemoteAdmin))
                         TryRegister(cmdData, CommandType.RemoteAdmin);
 
-                    if (commandAttribute.Types.HasFlag(CommandType.GameConsole))
+                    if (commandAttribute.Types.Contains(CommandType.GameConsole))
                         TryRegister(cmdData, CommandType.GameConsole);
 
-                    if (commandAttribute.Types.HasFlag(CommandType.PlayerConsole))
+                    if (commandAttribute.Types.Contains(CommandType.PlayerConsole))
                         TryRegister(cmdData, CommandType.PlayerConsole);
                 }
             }
@@ -127,7 +135,7 @@ namespace BetterCommands.Management
         {
             if (!TryGetCommand(cmdName, type, out var cmd))
             {
-                Log.Warning($"Something tried to unregister an unregistered command of type {type}: {cmdName}", "Command Manager");
+                Log.Warning($"Something tried to unregister an unknown command of type {type}: {cmdName}", "Command Manager");
                 return false;
             }
 
@@ -138,9 +146,9 @@ namespace BetterCommands.Management
             return true;
         }
 
-        public static bool TryGetCommand(string cmdName, CommandType commandType, out CommandData commandData)
+        public static bool TryGetCommand(string args, CommandType commandType, out CommandData commandData)
         {
-            commandData = _commandsByType[commandType].FirstOrDefault(x => x.Name.ToLower() == cmdName.ToLower() || x.Aliases.Any(y => y.ToLower() == cmdName.ToLower()));
+            commandData = _commandsByType[commandType].FirstOrDefault(cmd => string.Equals(args, cmd.Name, StringComparison.OrdinalIgnoreCase));
             return commandData != null;
         }
 
@@ -153,10 +161,6 @@ namespace BetterCommands.Management
 
             if (!TryGetCommand(cmdName, commandType, out var cmd))
             {
-                sender.characterClassManager.ConsolePrint($"[Better Commands] Command execution failed: Unknown command ({cmdName})!", "red");
-
-                Log.Debug($"Command {cmdName} does not exist or it's target method is null!", Loader.Config.IsDebugEnabled, "Command Manager");
-
                 return false;
             }
 
@@ -171,7 +175,6 @@ namespace BetterCommands.Management
 
                 ColorUtils.ColorMatchError(ref errorReason, false);
 
-                sender.characterClassManager.ConsolePrint($"[Command Output] {errorReason}", "red");
                 response += $"Command execution <color=red>failed</color>!\n<color=red>{errorReason}</color>";
 
                 if (error.Exception != null)
@@ -180,10 +183,12 @@ namespace BetterCommands.Management
 
                     ColorUtils.ColorMatchError(ref exceptionStr, true);
 
-                    sender.characterClassManager.ConsolePrint($"[Command Exception] {exceptionStr}", "red");
                     response += $"Exception:\n{exceptionStr}";
                     response += "</color>";
                 }
+
+                if (commandType != CommandType.RemoteAdmin)
+                    response = response.RemoveHtmlTags();
 
                 return true;
             }
@@ -191,10 +196,17 @@ namespace BetterCommands.Management
             {
                 response += result.Result;
                 response += "</color>";
-                sender.characterClassManager.ConsolePrint($"[Command Output] {response}", "red");
+
+                if (commandType != CommandType.RemoteAdmin)
+                    response = response.RemoveHtmlTags();
                 
                 return true;
             }
+        }
+
+        public static void UnregisterAll()
+        {
+            _commandsByType.ForEach(pair => pair.Value.Clear());
         }
 
         internal static void Synchronize(List<QueryProcessor.CommandData> commands)

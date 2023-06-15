@@ -10,7 +10,9 @@ namespace BetterCommands
         public DescriptionAttribute(object description)
         {
             Description = description?.ToString() ?? "Invalid Description";
-            if (Description.Length > 80) Description = Description.Substring(0, 80) + "...";
+
+            if (Description.Length > 80) 
+                Description = Description.Substring(0, 80) + "...";
         }
     }
 }

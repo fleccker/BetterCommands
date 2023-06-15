@@ -15,6 +15,7 @@ using helpers.Pooling.Pools;
 using PluginAPI.Core.Interfaces;
 
 using System.Collections;
+using System.Collections.Generic;
 
 namespace BetterCommands.Management
 {

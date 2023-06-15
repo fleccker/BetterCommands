@@ -6,6 +6,7 @@ namespace BetterCommands.Permissions
     public class PermissionAttribute : Attribute
     {
         public string[] RequiredNodes { get; }
+
         public PermissionLevel? RequiredLevel { get; }
         public PermissionNodeMode NodeMode { get; }
 
