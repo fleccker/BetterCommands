@@ -124,7 +124,6 @@
     <Compile Include="Permissions\PermissionNodeMode.cs" />
     <Compile Include="Permissions\PermissionUtils.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Support\Compendium\CompendiumSupport.cs" />
     <Compile Include="Attributes\Values\ValueRestrictionAttribute.cs" />
     <Compile Include="Attributes\Values\ValueRestrictionMode.cs" />
   </ItemGroup>

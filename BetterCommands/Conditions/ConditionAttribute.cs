@@ -12,13 +12,16 @@ namespace BetterCommands.Conditions
         {
             ConditionObject = conditionObject;
             Flags = default;
-            foreach (var flag in flags) Flags &= flag;
+
+            foreach (var flag in flags) 
+                Flags &= flag;
         }
 
         public ConditionAttribute(params ConditionFlag[] flags)
         {
             Flags = default;
-            foreach (var flag in flags) Flags &= flag;
+            foreach (var flag in flags) 
+                Flags &= flag;
         }
     }
 }

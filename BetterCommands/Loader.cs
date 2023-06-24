@@ -10,6 +10,7 @@ using BetterCommands.Management;
 using System.Reflection;
 
 using PluginAPI.Core.Interfaces;
+
 using BetterCommands.Permissions;
 
 namespace BetterCommands

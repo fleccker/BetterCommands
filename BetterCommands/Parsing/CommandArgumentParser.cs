@@ -32,6 +32,7 @@ namespace BetterCommands.Parsing
     public static class CommandArgumentParser
     {
         private static readonly Dictionary<Type, ICommandArgumentParser> _knownParsers = new Dictionary<Type, ICommandArgumentParser>();
+        private static readonly Dictionary<Type, Type> _parsingTypeCache = new Dictionary<Type, Type>();
 
         static CommandArgumentParser()
         {
@@ -53,18 +54,29 @@ namespace BetterCommands.Parsing
 
         public static bool TryGetParser(Type argType, out ICommandArgumentParser commandArgumentParser)
         {
-            if (Reflection.HasInterface<IPlayer>(argType)) 
-                argType = typeof(IPlayer);
-            else if (Reflection.HasType<DoorVariant>(argType)) 
-                argType = typeof(DoorVariant);
-            else if (argType.IsEnum) 
-                argType = typeof(Enum);
-            else if (argType.IsArray)
-                argType = typeof(Array);
-            else if (Reflection.HasInterface<IDictionary>(argType)) 
-                argType = typeof(IDictionary);
-            else if (Reflection.HasInterface<IEnumerable>(argType) && argType != typeof(string)) 
-                argType = typeof(IEnumerable);
+            if (!_parsingTypeCache.ContainsKey(argType))
+            {
+                var origType = argType;
+
+                if (Reflection.HasInterface<IPlayer>(argType))
+                    argType = typeof(IPlayer);
+                else if (Reflection.HasType<DoorVariant>(argType))
+                    argType = typeof(DoorVariant);
+                else if (argType.IsEnum)
+                    argType = typeof(Enum);
+                else if (argType.IsArray)
+                    argType = typeof(Array);
+                else if (Reflection.HasInterface<IDictionary>(argType))
+                    argType = typeof(IDictionary);
+                else if (Reflection.HasInterface<IEnumerable>(argType) && argType != typeof(string))
+                    argType = typeof(IEnumerable);
+
+                _parsingTypeCache[origType] = argType;
+            }
+            else
+            {
+                argType = _parsingTypeCache[argType];
+            }
             
             return _knownParsers.TryGetValue(argType, out commandArgumentParser) && commandArgumentParser != null;
         }

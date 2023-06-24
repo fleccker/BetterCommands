@@ -1,7 +1,4 @@
-﻿using BetterCommands.Support.Compendium;
-using BetterCommands.Management;
-
-using helpers.Extensions;
+﻿using helpers.Extensions;
 
 using System.Collections.Generic;
 using System.Linq;
@@ -27,9 +24,6 @@ namespace BetterCommands.Permissions
             if (PermissionUtils.TryGetClearId(hub, out var clear) && Config.LevelsByPlayer.TryGetValue(clear, out permission)) 
                 return true;
 
-            if (CompendiumSupport.TryGetUniqueId(hub, out var id) && Config.LevelsByPlayer.TryGetValue(id, out permission)) 
-                return true;
-
             return false;
         }
 
@@ -44,9 +38,6 @@ namespace BetterCommands.Permissions
                 return true;
 
             if (PermissionUtils.TryGetClearId(hub, out var clear) && Config.NodesByPlayer.TryGetValue(clear, out nodes)) 
-                return true;
-
-            if (CompendiumSupport.TryGetUniqueId(hub, out var id) && Config.NodesByPlayer.TryGetValue(id, out nodes)) 
                 return true;
 
             if (!TryGetLevel(hub, out var level)) 

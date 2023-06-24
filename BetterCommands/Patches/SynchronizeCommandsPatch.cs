@@ -20,16 +20,21 @@ namespace BetterCommands.Patches
             list.ForEach(x =>
             {
                 var desc = x.Description;
-                if (string.IsNullOrWhiteSpace(desc)) desc = null;
-                else if (desc.Length > 80) desc = desc.Substring(0, 80) + "...";
+
+                if (string.IsNullOrWhiteSpace(desc)) 
+                    desc = null;
+                else if (desc.Length > 80) 
+                    desc = desc.Substring(0, 80) + "...";
 
                 var data = new QueryProcessor.CommandData();
 
                 data.Command = x.Command;
                 data.Description = desc;
 
-                if (x is IUsageProvider usageProvider) data.Usage = usageProvider.Usage;
-                else data.Usage = null;
+                if (x is IUsageProvider usageProvider) 
+                    data.Usage = usageProvider.Usage;
+                else 
+                    data.Usage = null;
 
                 data.AliasOf = null;
                 data.Hidden = x is IHiddenCommand;

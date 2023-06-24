@@ -54,7 +54,7 @@ namespace BetterCommands.Patches
 
             var array = cmd.Trim().Split(QueryProcessor.SpaceArray, 512, StringSplitOptions.RemoveEmptyEntries);
 
-            if (!EventManager.ExecuteEvent(PluginAPI.Enums.ServerEventType.ConsoleCommand, sender, array[0], array.Skip(1).ToArray()))
+            if (!EventManager.ExecuteEvent(new ConsoleCommandEvent(sender, array[0], array.Skip(1).ToArray())))
             {
                 __result = null;
                 return false;
@@ -77,31 +77,25 @@ namespace BetterCommands.Patches
                 {
                     success = command.Execute(array.Segment(1), sender, out result);
 
-                    if (!EventManager.ExecuteEvent(PluginAPI.Enums.ServerEventType.ConsoleCommandExecuted, sender, array[0], array.Skip(1).ToArray(), success, result))
+                    if (!EventManager.ExecuteEvent(new ConsoleCommandExecutedEvent(sender, array[0], array.Skip(1).ToArray(), success, result)))
                     {
                         result = null;
                         return false;
                     }
 
-                    if (sender != null)
-                    {
-                        sender.Print(result, success ? ConsoleColor.Green : ConsoleColor.Red);
-                    }
+                    sender?.Print(result, success ? ConsoleColor.Green : ConsoleColor.Red);
                 }
                 catch (Exception ex)
                 {
                     result = $"Command execution failed! Error:\n{ex}";
 
-                    if (!EventManager.ExecuteEvent(PluginAPI.Enums.ServerEventType.ConsoleCommandExecuted, sender, array[0], array.Skip(1).ToArray(), false, result))
+                    if (!EventManager.ExecuteEvent(new ConsoleCommandExecutedEvent(sender, array[0], array.Skip(1).ToArray(), false, result)))
                     {
                         __result = null;
                         return false;
                     }
 
-                    if (sender != null)
-                    {
-                        sender.Print(result, ConsoleColor.Red);
-                    }
+                    sender?.Print(result, ConsoleColor.Red);
                 }
 
                 __result = result;
@@ -110,7 +104,7 @@ namespace BetterCommands.Patches
 
             var response = $"Command {cmd} does not exist!";
 
-            if (!EventManager.ExecuteEvent(PluginAPI.Enums.ServerEventType.ConsoleCommandExecuted, sender, array[0], array.Skip(1).ToArray(), false, response))
+            if (!EventManager.ExecuteEvent(new ConsoleCommandExecutedEvent(sender, array[0], array.Skip(1).ToArray(), false, response)))
             {
                 __result = null;
                 return false;
@@ -133,7 +127,7 @@ namespace BetterCommands.Patches
         {
             var array = query.Trim().Split(QueryProcessor.SpaceArray, 512, StringSplitOptions.RemoveEmptyEntries);
 
-            if (!EventManager.ExecuteEvent(PluginAPI.Enums.ServerEventType.PlayerGameConsoleCommand, __instance._hub, array[0], array.Skip(1).ToArray()))
+            if (!EventManager.ExecuteEvent(new PlayerGameConsoleCommandEvent(__instance._hub, array[0], array.Skip(1).ToArray())))
                 return false;
 
             if (CommandManager.TryExecute(string.Join(" ", array), __instance._hub, CommandType.PlayerConsole, out var response1))
@@ -148,7 +142,7 @@ namespace BetterCommands.Patches
                 {
                     var success = command.Execute(array.Segment(1), __instance._sender, out var response);
 
-                    if (!EventManager.ExecuteEvent(PluginAPI.Enums.ServerEventType.PlayerGameConsoleCommandExecuted, __instance._hub, array[0], array.Skip(1).ToArray(), success, response))
+                    if (!EventManager.ExecuteEvent(new PlayerGameConsoleCommandExecutedEvent(__instance._hub, array[0], array.Skip(1).ToArray(), success, response)))
                         return false;
 
                     __instance.GCT.SendToClient(__instance.connectionToClient, $"{array[0].ToUpper()}#{response.RemoveHtmlTags()}", "");
@@ -157,7 +151,7 @@ namespace BetterCommands.Patches
                 {
                     var response = $"Command execution failed! Error:\n{ex}";
 
-                    if (!EventManager.ExecuteEvent(PluginAPI.Enums.ServerEventType.PlayerGameConsoleCommandExecuted, __instance._hub, array[0], array.Skip(1).ToArray(), false, response))
+                    if (!EventManager.ExecuteEvent(new PlayerGameConsoleCommandExecutedEvent(__instance._hub, array[0], array.Skip(1).ToArray(), false, response)))
                         return false;
 
                     __instance.GCT.SendToClient(__instance.connectionToClient, $"{array[0].ToUpper()}#{response}", "");
@@ -168,7 +162,7 @@ namespace BetterCommands.Patches
 
             var response2 = "Command not found.";
 
-            if (!EventManager.ExecuteEvent(PluginAPI.Enums.ServerEventType.PlayerGameConsoleCommandExecuted, __instance._hub, array[0], array.Skip(1).ToArray(), false, response2))
+            if (!EventManager.ExecuteEvent(new PlayerGameConsoleCommandExecutedEvent(__instance._hub, array[0], array.Skip(1).ToArray(), false, response2)))
                 return false;
 
             __instance.GCT.SendToClient(__instance.connectionToClient, $"SYSTEM#{response2}", "red");
@@ -230,7 +224,7 @@ namespace BetterCommands.Patches
             {
                 var split = q.Trim().Split(QueryProcessor.SpaceArray, 512, StringSplitOptions.RemoveEmptyEntries);
 
-                if (!EventManager.ExecuteEvent(PluginAPI.Enums.ServerEventType.RemoteAdminCommand, sender, split[0], split.Skip(1).ToArray()))
+                if (!EventManager.ExecuteEvent(new RemoteAdminCommandEvent(sender, split[0], split.Skip(1).ToArray())))
                 {
                     __result = null;
                     return false;
@@ -259,7 +253,7 @@ namespace BetterCommands.Patches
                     try
                     {
                         var success = command.Execute(split.Segment(1), sender, out var response);
-                        if (!EventManager.ExecuteEvent(PluginAPI.Enums.ServerEventType.RemoteAdminCommandExecuted, sender, split[0], split.Skip(1).ToArray(), success, response))
+                        if (!EventManager.ExecuteEvent(new RemoteAdminCommandExecutedEvent(sender, split[0], split.Skip(1).ToArray(), success, response)))
                         {
                             __result = null;
                             return false;
@@ -278,7 +272,7 @@ namespace BetterCommands.Patches
                 }
                 else
                 {
-                    if (!EventManager.ExecuteEvent(PluginAPI.Enums.ServerEventType.RemoteAdminCommandExecuted, sender, split[0], split.Skip(1).ToArray(), false, "Unknown command!"))
+                    if (!EventManager.ExecuteEvent(new RemoteAdminCommandExecutedEvent(sender, split[0], split.Skip(1).ToArray(), false, "Unknown command!")))
                     {
                         __result = null;
                         return false;
