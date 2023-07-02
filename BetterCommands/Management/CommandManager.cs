@@ -146,9 +146,9 @@ namespace BetterCommands.Management
             return true;
         }
 
-        public static bool TryGetCommand(string args, CommandType commandType, out CommandData commandData)
+        public static bool TryGetCommand(string arg, CommandType commandType, out CommandData commandData)
         {
-            commandData = _commandsByType[commandType].FirstOrDefault(cmd => string.Equals(args, cmd.Name, StringComparison.OrdinalIgnoreCase));
+            commandData = _commandsByType[commandType].FirstOrDefault(cmd => string.Equals(arg, cmd.Name, StringComparison.OrdinalIgnoreCase) || (cmd.Aliases != null && cmd.Aliases.Any(alias => string.Equals(alias, cmd.Name, StringComparison.OrdinalIgnoreCase))));
             return commandData != null;
         }
 

@@ -62,6 +62,17 @@ namespace BetterCommands
             {
                 if (plugin != Assembly.GetExecutingAssembly())
                     CommandManager.Register(plugin);
+
+                foreach (var type in plugin.GetTypes())
+                {
+                    foreach (var method in type.GetMethods())
+                    {
+                        if (method.Name == "RegisterBetterCommandsIndependent" && method.IsStatic)
+                        {
+                            method.Invoke(null, null);
+                        }
+                    }
+                }
             }
 
             Log.Info($"Search completed (found {CommandManager.Commands[CommandType.RemoteAdmin].Count} remote admin commands; {CommandManager.Commands[CommandType.GameConsole].Count} console commands and {CommandManager.Commands[CommandType.PlayerConsole].Count} player commands).", "Better Commands");

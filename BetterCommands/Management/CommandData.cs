@@ -48,7 +48,11 @@ namespace BetterCommands.Management
             TargetMethod = target;
             DeclaringType = target.DeclaringType;
             SenderType = target.GetParameters()[0].ParameterType;
-            Plugin = AssemblyLoader.InstalledPlugins.First(x => x._entryPoint.DeclaringType.Assembly == target.DeclaringType.Assembly);
+
+            Plugin = AssemblyLoader.InstalledPlugins.FirstOrDefault(x => x._entryPoint.DeclaringType.Assembly == target.DeclaringType.Assembly);
+
+            if (Plugin is null)
+                Plugin = Loader.Handler;
 
             Permissions = permissions;
             Arguments = arguments;
