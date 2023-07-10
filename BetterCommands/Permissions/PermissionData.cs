@@ -11,6 +11,11 @@ namespace BetterCommands.Permissions
 
         public IResult<object> Validate(ReferenceHub player)
         {
+            if (player.Mode is ClientInstanceMode.DedicatedServer || player.Mode is ClientInstanceMode.Host)
+            {
+                return new SuccessResult(null);
+            }
+
             if (RequiredNodes != null && RequiredNodes.Length > 0)
             {
                 if (PermissionManager.TryGetNodes(player, out var nodes))

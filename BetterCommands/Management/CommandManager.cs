@@ -85,6 +85,9 @@ namespace BetterCommands.Management
                     if (method.TryGetAttribute<DescriptionAttribute>(out var descriptionAttribute))
                         description = descriptionAttribute.Description;
 
+                    if (method.TryGetAttribute<CommandAliasesAttribute>(out var aliasesAttribute))
+                        aliases = aliasesAttribute.Aliases ?? Array.Empty<string>();
+
                     var conditionAttributes = method.GetCustomAttributes<ConditionAttribute>();
                     if (conditionAttributes.Any())
                     {
@@ -148,8 +151,31 @@ namespace BetterCommands.Management
 
         public static bool TryGetCommand(string arg, CommandType commandType, out CommandData commandData)
         {
-            commandData = _commandsByType[commandType].FirstOrDefault(cmd => string.Equals(arg, cmd.Name, StringComparison.OrdinalIgnoreCase) || (cmd.Aliases != null && cmd.Aliases.Any(alias => string.Equals(alias, cmd.Name, StringComparison.OrdinalIgnoreCase))));
-            return commandData != null;
+            commandData = null;
+            arg = arg.Trim().ToLowerInvariant();
+
+            foreach (var cmd in _commandsByType[commandType])
+            {
+                if (cmd.Name.ToLower() == arg)
+                {
+                    commandData = cmd;
+                    return true;
+                }
+
+                if (cmd.Aliases != null && cmd.Aliases.Any())
+                {
+                    foreach (var alias in cmd.Aliases)
+                    {
+                        if (alias.ToLower() == arg)
+                        {
+                            commandData = cmd;
+                            return true;
+                        }
+                    }
+                }
+            }
+
+            return false;
         }
 
         public static bool TryExecute(string argString, ReferenceHub sender, CommandType commandType, out string response)

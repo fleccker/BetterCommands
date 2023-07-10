@@ -28,10 +28,10 @@ namespace BetterCommands
 
         [PluginEntryPoint(
             "BetterCommands",
-            "1.0.0",
+            "1.0.1",
             "Introduces a new command system for plugins to use.",
-            "fleccker")]
-        [PluginPriority(LoadPriority.Highest)] // why is it reversed, bruh
+            "marchellc_")]
+        [PluginPriority(LoadPriority.Lowest)] // why is it reversed, bruh
         public void Load()
         {
             Instance = this;
